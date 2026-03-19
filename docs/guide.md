@@ -106,7 +106,7 @@ Same as `get-prices` but at a specific point in time.
     asset-type: equity
 ```
 
-## Beyond the API: on-chain price feeds
+## Beyond this W3 integration
 
 This action uses Pyth's Hermes API for off-chain price data — fast,
 free, and ideal for workflow-level decisions. Pyth also operates as
