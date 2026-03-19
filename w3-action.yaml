@@ -1,0 +1,65 @@
+kind: integration
+partner: pyth
+name: Pyth Price Oracle
+version: 1.0.0
+repo: w3-io/w3-pyth-action
+commands:
+  - name: get-feeds
+    description: >
+      List available price feeds. Supports filtering by search query and
+      asset type (crypto, equity, fx, metal, rates, commodities, crypto_index).
+    inputs:
+      query:
+        type: string
+        required: false
+        description: Case-insensitive symbol substring match
+      asset-type:
+        type: string
+        required: false
+        description: Asset type filter
+    outputs:
+      result:
+        type: array
+        description: Array of {id, attributes} feed metadata objects
+
+  - name: get-prices
+    description: >
+      Get latest prices for given feeds. Accepts either raw feed IDs or
+      human-readable symbols (resolved to IDs automatically via USD pairs).
+    inputs:
+      ids:
+        type: string
+        required: false
+        description: Comma-separated feed IDs (hex strings)
+      symbols:
+        type: string
+        required: false
+        description: Comma-separated token symbols (e.g. "BTC,ETH")
+    outputs:
+      result:
+        type: object
+        description: >
+          Object with prices array. Each entry has id, symbol (if resolved),
+          price (value, confidence, expo, publishTime), emaPrice, and metadata.
+
+  - name: get-historical-prices
+    description: >
+      Get prices at a specific historical publish time. Same inputs as
+      get-prices plus a required publish-time timestamp.
+    inputs:
+      ids:
+        type: string
+        required: false
+        description: Comma-separated feed IDs (hex strings)
+      symbols:
+        type: string
+        required: false
+        description: Comma-separated token symbols (e.g. "BTC,ETH")
+      publish-time:
+        type: number
+        required: true
+        description: Unix timestamp in seconds
+    outputs:
+      result:
+        type: object
+        description: Same structure as get-prices at the requested timestamp

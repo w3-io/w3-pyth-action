@@ -1,0 +1,35 @@
+name: 'W3 Pyth Action'
+description: 'Price oracle for crypto, equities, FX, metals, and more via Pyth Network'
+author: 'w3-io'
+
+inputs:
+  command:
+    description: 'Operation to perform: get-feeds, get-prices, get-historical-prices'
+    required: true
+  api-url:
+    description: 'Pyth Hermes API base URL (override for testing/staging)'
+    required: false
+    default: 'https://hermes.pyth.network'
+  ids:
+    description: 'Comma-separated price feed IDs (hex strings)'
+    required: false
+  symbols:
+    description: 'Comma-separated token symbols (e.g. "BTC,ETH"). Resolved to feed IDs automatically.'
+    required: false
+  query:
+    description: 'Search string for get-feeds (case-insensitive symbol substring match)'
+    required: false
+  asset-type:
+    description: 'Asset type filter for get-feeds: crypto, equity, fx, metal, rates, commodities, crypto_index'
+    required: false
+  publish-time:
+    description: 'Unix timestamp for get-historical-prices'
+    required: false
+
+outputs:
+  result:
+    description: 'JSON result of the operation'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

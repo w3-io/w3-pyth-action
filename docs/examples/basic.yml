@@ -1,0 +1,25 @@
+name: Pyth price check
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: Comma-separated token symbols
+        required: true
+        default: "BTC,ETH,SOL"
+
+jobs:
+  prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get latest prices
+        id: prices
+        uses: w3-io/w3-pyth-action@v1
+        with:
+          command: get-prices
+          symbols: ${{ inputs.symbols }}
+
+      - name: Show results
+        run: |
+          echo "Latest prices:"
+          echo '${{ steps.prices.outputs.result }}' | jq '.prices[] | {symbol, price: .price.value, confidence: .price.confidence}'
