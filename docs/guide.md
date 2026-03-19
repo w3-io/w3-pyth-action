@@ -105,3 +105,27 @@ Same as `get-prices` but at a specific point in time.
     command: get-feeds
     asset-type: equity
 ```
+
+## Beyond the API: on-chain price feeds
+
+This action uses Pyth's Hermes API for off-chain price data — fast,
+free, and ideal for workflow-level decisions. Pyth also operates as
+an **on-chain pull oracle** across 100+ blockchains.
+
+**How it works together:** The Hermes API returns signed price
+attestations. The same attestation can be submitted as part of a
+smart contract transaction, where the on-chain Pyth contract verifies
+the publisher signature cryptographically.
+
+| Layer | What | Trust model |
+|-------|------|-------------|
+| This action (off-chain) | Workflow decisions: should I trade? Is the price right? | Signed data, verified by the workflow |
+| Pyth on-chain contract | Smart contract enforcement: release funds only if price is verified | Cryptographic proof on-chain |
+
+Think of it as **client-side vs. server-side validation**: the action
+is where you decide; the smart contract is where you enforce. Neither
+replaces the other — they're complementary.
+
+For on-chain integration, see [Pyth's smart contract docs](https://docs.pyth.network/price-feeds/use-real-time-data).
+The feed IDs returned by this action's `get-feeds` command are the
+same IDs used in on-chain contracts.
