@@ -7,6 +7,8 @@ complexity: beginner
 
 # Pyth Price Oracle
 
+[Pyth Network](https://pyth.network) is a decentralized oracle providing institutional-grade price data across 100+ blockchains. Unlike scraped oracles, Pyth sources data directly from first-party publishers — exchanges, market makers, and trading firms — with 400ms update frequency. Covers crypto, equities, FX, metals, rates, and commodities. No API key required. Use this action for price-gated workflows, portfolio valuation, trade validation, or any scenario needing reliable real-time market data.
+
 Real-time and historical price data for crypto, equities, FX, metals,
 and more via the Pyth Network Hermes API. No API key required.
 
