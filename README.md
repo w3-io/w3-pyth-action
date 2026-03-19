@@ -4,6 +4,21 @@ GitHub Action for real-time and historical price data via the
 [Pyth Network](https://pyth.network) Hermes API. Supports crypto,
 equities, FX, metals, and more. No API key required.
 
+## About Pyth Network
+
+[Pyth Network](https://pyth.network) is a decentralized oracle
+network — "the price layer for global finance." It delivers price
+updates with 400ms frequency across 100+ blockchains, covering
+crypto, equities, FX, metals, rates, and commodities.
+
+Data is sourced directly from first-party publishers (exchanges,
+market makers, trading firms) rather than scraped from secondary
+sources. No API key is required — access is permissionless.
+
+**Why use it:** Real-time, institutional-grade price data in
+workflows. Trigger actions on price movements, calculate portfolio
+values, or validate trade execution prices.
+
 ## Usage
 
 ```yaml
