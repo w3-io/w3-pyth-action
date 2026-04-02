@@ -1,25 +1,8 @@
 # W3 Pyth Action
 
-GitHub Action for real-time and historical price data via the
-[Pyth Network](https://pyth.network) Hermes API. Supports crypto,
-equities, FX, metals, and more. No API key required.
+Price oracle for crypto, equities, FX, metals, and more via Pyth Network.
 
-## About Pyth Network
-
-[Pyth Network](https://pyth.network) is a decentralized oracle
-network — "the price layer for global finance." It delivers price
-updates with 400ms frequency across 100+ blockchains, covering
-crypto, equities, FX, metals, rates, and commodities.
-
-Data is sourced directly from first-party publishers (exchanges,
-market makers, trading firms) rather than scraped from secondary
-sources. No API key is required — access is permissionless.
-
-**Why use it:** Real-time, institutional-grade price data in
-workflows. Trigger actions on price movements, calculate portfolio
-values, or validate trade execution prices.
-
-## Usage
+## Quick Start
 
 ```yaml
 - name: Get BTC and ETH prices
@@ -28,34 +11,34 @@ values, or validate trade execution prices.
   with:
     command: get-prices
     symbols: "BTC,ETH"
-
-- name: Use prices
-  run: echo '${{ steps.prices.outputs.result }}' | jq '.prices[]'
 ```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `get-feeds` | Search and list available price feeds |
+| `get-prices` | Get real-time prices by symbol or feed ID |
+| `get-historical-prices` | Get prices at a specific point in time |
 
 ## Inputs
 
-| Name           | Required | Description                              |
-|----------------|----------|------------------------------------------|
-| `command`      | yes      | `get-feeds`, `get-prices`, or `get-historical-prices` |
-| `ids`          | no       | Comma-separated price feed IDs (hex)     |
-| `symbols`      | no       | Comma-separated token symbols            |
-| `query`        | no       | Search string for `get-feeds`            |
-| `asset-type`   | no       | Asset type filter for `get-feeds`        |
-| `publish-time` | no       | Unix timestamp for `get-historical-prices` |
-| `api-url`      | no       | Override Pyth Hermes API base URL        |
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `command` | Yes | — | `get-feeds`, `get-prices`, or `get-historical-prices` |
+| `ids` | No | — | Comma-separated price feed IDs (hex) |
+| `symbols` | No | — | Comma-separated token symbols (e.g. `BTC,ETH`) |
+| `query` | No | — | Search string for `get-feeds` |
+| `asset-type` | No | — | Asset type filter: `crypto`, `equity`, `fx`, `metal`, `rates`, `commodities`, `crypto_index` |
+| `publish-time` | No | — | Unix timestamp for `get-historical-prices` |
+| `api-url` | No | `https://hermes.pyth.network` | Pyth Hermes API base URL override |
 
 ## Outputs
 
-| Name     | Description                  |
-|----------|------------------------------|
+| Output | Description |
+|--------|-------------|
 | `result` | JSON result of the operation |
 
-## Documentation
+## Authentication
 
-See [docs/guide.md](docs/guide.md) for the full reference, including
-command details, output schemas, and workflow examples.
-
-## License
-
-Private
+No API key required. Pyth Network access is permissionless.
