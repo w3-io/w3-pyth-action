@@ -1,34 +1,48 @@
 import { jest } from '@jest/globals'
 import { readFileSync } from 'fs'
-import { PythClient, PythError } from '../src/pyth.js'
 
-const feedsFixture = JSON.parse(readFileSync(new URL('../__fixtures__/feeds-response.json', import.meta.url)))
-const pricesFixture = JSON.parse(readFileSync(new URL('../__fixtures__/prices-response.json', import.meta.url)))
+const feedsFixture = JSON.parse(
+  readFileSync(new URL('../__fixtures__/feeds-response.json', import.meta.url)),
+)
+const pricesFixture = JSON.parse(
+  readFileSync(new URL('../__fixtures__/prices-response.json', import.meta.url)),
+)
 
-const mockFetch = jest.fn()
-global.fetch = mockFetch
+const mockRequest = jest.fn()
+
+const actionCore = await import('@w3-io/action-core')
+
+jest.unstable_mockModule('@w3-io/action-core', () => ({
+  ...actionCore,
+  request: mockRequest,
+}))
+
+const { PythClient } = await import('../src/pyth.js')
+const { W3ActionError } = actionCore
 
 function mockOk(data) {
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
+  mockRequest.mockResolvedValueOnce({
     status: 200,
-    text: async () => JSON.stringify(data),
+    headers: {},
+    body: data,
+    raw: JSON.stringify(data),
   })
 }
 
 function mockError(status, body) {
-  mockFetch.mockResolvedValueOnce({
-    ok: false,
-    status,
-    text: async () => body,
-  })
+  mockRequest.mockRejectedValueOnce(
+    new W3ActionError('HTTP_ERROR', `GET url: ${status}`, {
+      statusCode: status,
+      details: body,
+    }),
+  )
 }
 
 describe('PythClient', () => {
   const client = new PythClient()
 
   beforeEach(() => {
-    mockFetch.mockReset()
+    mockRequest.mockReset()
   })
 
   describe('getFeeds', () => {
@@ -43,7 +57,7 @@ describe('PythClient', () => {
       mockOk([])
       await client.getFeeds({ query: 'BTC', assetType: 'crypto' })
 
-      const url = mockFetch.mock.calls[0][0]
+      const url = mockRequest.mock.calls[0][0]
       expect(url).toContain('query=BTC')
       expect(url).toContain('asset_type=crypto')
     })
@@ -52,7 +66,7 @@ describe('PythClient', () => {
       mockOk([])
       await client.getFeeds()
 
-      const url = mockFetch.mock.calls[0][0]
+      const url = mockRequest.mock.calls[0][0]
       expect(url).not.toContain('?')
     })
   })
@@ -79,7 +93,7 @@ describe('PythClient', () => {
       mockOk(pricesFixture)
       await client.getLatestPrices(['aaa', 'bbb'])
 
-      const url = mockFetch.mock.calls[0][0]
+      const url = mockRequest.mock.calls[0][0]
       expect(url).toContain('ids%5B%5D=aaa')
       expect(url).toContain('ids%5B%5D=bbb')
     })
@@ -90,7 +104,7 @@ describe('PythClient', () => {
       mockOk(pricesFixture)
       await client.getHistoricalPrices(['aaa'], 1710756000)
 
-      const url = mockFetch.mock.calls[0][0]
+      const url = mockRequest.mock.calls[0][0]
       expect(url).toContain('/v2/updates/price/1710756000')
     })
 
@@ -129,7 +143,6 @@ describe('PythClient', () => {
 
     test('only matches USD quote currency', async () => {
       mockOk(feedsFixture)
-      // BTC/EUR exists in fixtures but should not match
       const result = await client.resolveSymbols(['BTC'])
       expect(result).toHaveLength(1)
       expect(result[0].id).toBe('e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43')
@@ -142,23 +155,9 @@ describe('PythClient', () => {
       try {
         await client.getFeeds()
       } catch (e) {
-        expect(e).toBeInstanceOf(PythError)
-        expect(e.code).toBe('API_ERROR')
-        expect(e.status).toBe(500)
-      }
-    })
-
-    test('throws on invalid JSON', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: async () => 'not json',
-      })
-      try {
-        await client.getFeeds()
-      } catch (e) {
-        expect(e).toBeInstanceOf(PythError)
-        expect(e.code).toBe('PARSE_ERROR')
+        expect(e).toBeInstanceOf(W3ActionError)
+        expect(e.code).toBe('HTTP_ERROR')
+        expect(e.statusCode).toBe(500)
       }
     })
   })

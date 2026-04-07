@@ -27553,7 +27553,7 @@ function setOutputs(outputs) {
 /**
  * Structured error with code, message, and optional details.
  */
-class error_W3ActionError extends Error {
+class W3ActionError extends Error {
     code;
     statusCode;
     details;
@@ -27572,7 +27572,7 @@ class error_W3ActionError extends Error {
  *   main().catch(handleError);
  */
 function handleError(error) {
-    if (error instanceof error_W3ActionError) {
+    if (error instanceof W3ActionError) {
         lib_core.setOutput("error-code", error.code);
         if (error.statusCode)
             lib_core.setOutput("status-code", error.statusCode);
@@ -27761,10 +27761,10 @@ async function bridgeRequest(path, body) {
                     if (!res.statusCode || res.statusCode >= 400) {
                         try {
                             const err = JSON.parse(data);
-                            reject(new error_W3ActionError(err.code ?? "BRIDGE_ERROR", err.error ?? `Bridge returned ${res.statusCode}`, { statusCode: res.statusCode, details: err }));
+                            reject(new W3ActionError(err.code ?? "BRIDGE_ERROR", err.error ?? `Bridge returned ${res.statusCode}`, { statusCode: res.statusCode, details: err }));
                         }
                         catch {
-                            reject(new error_W3ActionError("BRIDGE_ERROR", data || `HTTP ${res.statusCode}`, {
+                            reject(new W3ActionError("BRIDGE_ERROR", data || `HTTP ${res.statusCode}`, {
                                 statusCode: res.statusCode,
                             }));
                         }
@@ -27779,7 +27779,7 @@ async function bridgeRequest(path, body) {
                     }
                 });
             });
-            req.on("error", (err) => reject(new error_W3ActionError("BRIDGE_UNAVAILABLE", err.message)));
+            req.on("error", (err) => reject(new W3ActionError("BRIDGE_UNAVAILABLE", err.message)));
             if (payload)
                 req.write(payload);
             req.end();
@@ -27802,7 +27802,7 @@ async function bridgeRequest(path, body) {
         catch {
             // not JSON
         }
-        throw new error_W3ActionError(parsed?.code ?? "BRIDGE_ERROR", parsed?.error ?? text ?? `Bridge returned ${res.status}`, { statusCode: res.status, details: parsed });
+        throw new W3ActionError(parsed?.code ?? "BRIDGE_ERROR", parsed?.error ?? text ?? `Bridge returned ${res.status}`, { statusCode: res.status, details: parsed });
     }
     try {
         return JSON.parse(text);
@@ -28006,17 +28006,9 @@ function createMockCore() {
  * Designed for reuse — import this module directly if building a custom action.
  */
 
-const DEFAULT_BASE_URL = 'https://hermes.pyth.network'
 
-class PythError extends Error {
-  constructor(message, { status, body, code } = {}) {
-    super(message)
-    this.name = 'PythError'
-    this.status = status
-    this.body = body
-    this.code = code
-  }
-}
+
+const DEFAULT_BASE_URL = 'https://hermes.pyth.network'
 
 class PythClient {
   constructor({ baseUrl = DEFAULT_BASE_URL } = {}) {
@@ -28050,7 +28042,7 @@ class PythClient {
    * @returns {object} Price update with binary and parsed fields
    */
   async getLatestPrices(ids, { parsed = true } = {}) {
-    if (!ids?.length) throw new PythError('At least one feed ID is required', { code: 'MISSING_IDS' })
+    if (!ids?.length) throw new W3ActionError('MISSING_IDS', 'At least one feed ID is required')
 
     const params = new URLSearchParams()
     for (const id of ids) params.append('ids[]', id)
@@ -28069,8 +28061,8 @@ class PythClient {
    * @returns {object} Price update at the given timestamp
    */
   async getHistoricalPrices(ids, publishTime) {
-    if (!ids?.length) throw new PythError('At least one feed ID is required', { code: 'MISSING_IDS' })
-    if (!publishTime) throw new PythError('publish-time is required', { code: 'MISSING_PUBLISH_TIME' })
+    if (!ids?.length) throw new W3ActionError('MISSING_IDS', 'At least one feed ID is required')
+    if (!publishTime) throw new W3ActionError('MISSING_PUBLISH_TIME', 'publish-time is required')
 
     const params = new URLSearchParams()
     for (const id of ids) params.append('ids[]', id)
@@ -28147,30 +28139,11 @@ class PythClient {
   }
 
   async request(url) {
-    const response = await fetch(url, {
+    const { body } = await request(url, {
       method: 'GET',
       headers: { Accept: 'application/json' },
     })
-
-    const body = await response.text()
-
-    if (!response.ok) {
-      throw new PythError(`Pyth API error: ${response.status}`, {
-        status: response.status,
-        body,
-        code: 'API_ERROR',
-      })
-    }
-
-    try {
-      return JSON.parse(body)
-    } catch {
-      throw new PythError('Invalid JSON response from Pyth', {
-        status: response.status,
-        body,
-        code: 'PARSE_ERROR',
-      })
-    }
+    return body
   }
 }
 
@@ -28212,9 +28185,10 @@ const router = createCommandRouter({
     const publishTime = lib_core.getInput('publish-time')
 
     if (!publishTime) {
-      throw new PythError('publish-time is required for get-historical-prices', {
-        code: 'MISSING_PUBLISH_TIME',
-      })
+      throw new W3ActionError(
+        'MISSING_PUBLISH_TIME',
+        'publish-time is required for get-historical-prices',
+      )
     }
 
     const result = await client.getHistoricalPrices(ids, Number(publishTime))
@@ -28258,7 +28232,7 @@ async function resolveIds(client) {
 
   const symbols = parseList(lib_core.getInput('symbols'))
   if (!symbols.length) {
-    throw new PythError('Either ids or symbols is required', { code: 'MISSING_IDS' })
+    throw new W3ActionError('MISSING_IDS', 'Either ids or symbols is required')
   }
 
   const resolved = await client.resolveSymbols(symbols)

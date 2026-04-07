@@ -1,6 +1,6 @@
-import { createCommandRouter, setJsonOutput, handleError } from '@w3-io/action-core'
+import { createCommandRouter, setJsonOutput, handleError, W3ActionError } from '@w3-io/action-core'
 import * as core from '@actions/core'
-import { PythClient, PythError } from './pyth.js'
+import { PythClient } from './pyth.js'
 
 const router = createCommandRouter({
   'get-feeds': async () => {
@@ -35,9 +35,10 @@ const router = createCommandRouter({
     const publishTime = core.getInput('publish-time')
 
     if (!publishTime) {
-      throw new PythError('publish-time is required for get-historical-prices', {
-        code: 'MISSING_PUBLISH_TIME',
-      })
+      throw new W3ActionError(
+        'MISSING_PUBLISH_TIME',
+        'publish-time is required for get-historical-prices',
+      )
     }
 
     const result = await client.getHistoricalPrices(ids, Number(publishTime))
@@ -81,7 +82,7 @@ async function resolveIds(client) {
 
   const symbols = parseList(core.getInput('symbols'))
   if (!symbols.length) {
-    throw new PythError('Either ids or symbols is required', { code: 'MISSING_IDS' })
+    throw new W3ActionError('MISSING_IDS', 'Either ids or symbols is required')
   }
 
   const resolved = await client.resolveSymbols(symbols)

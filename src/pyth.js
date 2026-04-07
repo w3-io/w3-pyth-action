@@ -6,17 +6,9 @@
  * Designed for reuse — import this module directly if building a custom action.
  */
 
-const DEFAULT_BASE_URL = 'https://hermes.pyth.network'
+import { request, W3ActionError } from '@w3-io/action-core'
 
-export class PythError extends Error {
-  constructor(message, { status, body, code } = {}) {
-    super(message)
-    this.name = 'PythError'
-    this.status = status
-    this.body = body
-    this.code = code
-  }
-}
+const DEFAULT_BASE_URL = 'https://hermes.pyth.network'
 
 export class PythClient {
   constructor({ baseUrl = DEFAULT_BASE_URL } = {}) {
@@ -50,7 +42,7 @@ export class PythClient {
    * @returns {object} Price update with binary and parsed fields
    */
   async getLatestPrices(ids, { parsed = true } = {}) {
-    if (!ids?.length) throw new PythError('At least one feed ID is required', { code: 'MISSING_IDS' })
+    if (!ids?.length) throw new W3ActionError('MISSING_IDS', 'At least one feed ID is required')
 
     const params = new URLSearchParams()
     for (const id of ids) params.append('ids[]', id)
@@ -69,8 +61,8 @@ export class PythClient {
    * @returns {object} Price update at the given timestamp
    */
   async getHistoricalPrices(ids, publishTime) {
-    if (!ids?.length) throw new PythError('At least one feed ID is required', { code: 'MISSING_IDS' })
-    if (!publishTime) throw new PythError('publish-time is required', { code: 'MISSING_PUBLISH_TIME' })
+    if (!ids?.length) throw new W3ActionError('MISSING_IDS', 'At least one feed ID is required')
+    if (!publishTime) throw new W3ActionError('MISSING_PUBLISH_TIME', 'publish-time is required')
 
     const params = new URLSearchParams()
     for (const id of ids) params.append('ids[]', id)
@@ -147,29 +139,10 @@ export class PythClient {
   }
 
   async request(url) {
-    const response = await fetch(url, {
+    const { body } = await request(url, {
       method: 'GET',
       headers: { Accept: 'application/json' },
     })
-
-    const body = await response.text()
-
-    if (!response.ok) {
-      throw new PythError(`Pyth API error: ${response.status}`, {
-        status: response.status,
-        body,
-        code: 'API_ERROR',
-      })
-    }
-
-    try {
-      return JSON.parse(body)
-    } catch {
-      throw new PythError('Invalid JSON response from Pyth', {
-        status: response.status,
-        body,
-        code: 'PARSE_ERROR',
-      })
-    }
+    return body
   }
 }
