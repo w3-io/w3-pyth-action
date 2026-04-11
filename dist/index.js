@@ -27390,141 +27390,48 @@ function parseParams (str) {
 module.exports = parseParams
 
 
-/***/ })
+/***/ }),
 
-/******/ });
-/************************************************************************/
-/******/ // The module cache
-/******/ var __webpack_module_cache__ = {};
-/******/ 
-/******/ // The require function
-/******/ function __nccwpck_require__(moduleId) {
-/******/ 	// Check if module is in cache
-/******/ 	var cachedModule = __webpack_module_cache__[moduleId];
-/******/ 	if (cachedModule !== undefined) {
-/******/ 		return cachedModule.exports;
-/******/ 	}
-/******/ 	// Create a new module (and put it into the cache)
-/******/ 	var module = __webpack_module_cache__[moduleId] = {
-/******/ 		// no module.id needed
-/******/ 		// no module.loaded needed
-/******/ 		exports: {}
-/******/ 	};
-/******/ 
-/******/ 	// Execute the module function
-/******/ 	var threw = true;
-/******/ 	try {
-/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nccwpck_require__);
-/******/ 		threw = false;
-/******/ 	} finally {
-/******/ 		if(threw) delete __webpack_module_cache__[moduleId];
-/******/ 	}
-/******/ 
-/******/ 	// Return the exports of the module
-/******/ 	return module.exports;
-/******/ }
-/******/ 
-/************************************************************************/
-/******/ /* webpack/runtime/create fake namespace object */
-/******/ (() => {
-/******/ 	var getProto = Object.getPrototypeOf ? (obj) => (Object.getPrototypeOf(obj)) : (obj) => (obj.__proto__);
-/******/ 	var leafPrototypes;
-/******/ 	// create a fake namespace object
-/******/ 	// mode & 1: value is a module id, require it
-/******/ 	// mode & 2: merge all properties of value into the ns
-/******/ 	// mode & 4: return value when already ns object
-/******/ 	// mode & 16: return value when it's Promise-like
-/******/ 	// mode & 8|1: behave like require
-/******/ 	__nccwpck_require__.t = function(value, mode) {
-/******/ 		if(mode & 1) value = this(value);
-/******/ 		if(mode & 8) return value;
-/******/ 		if(typeof value === 'object' && value) {
-/******/ 			if((mode & 4) && value.__esModule) return value;
-/******/ 			if((mode & 16) && typeof value.then === 'function') return value;
-/******/ 		}
-/******/ 		var ns = Object.create(null);
-/******/ 		__nccwpck_require__.r(ns);
-/******/ 		var def = {};
-/******/ 		leafPrototypes = leafPrototypes || [null, getProto({}), getProto([]), getProto(getProto)];
-/******/ 		for(var current = mode & 2 && value; typeof current == 'object' && !~leafPrototypes.indexOf(current); current = getProto(current)) {
-/******/ 			Object.getOwnPropertyNames(current).forEach((key) => (def[key] = () => (value[key])));
-/******/ 		}
-/******/ 		def['default'] = () => (value);
-/******/ 		__nccwpck_require__.d(ns, def);
-/******/ 		return ns;
-/******/ 	};
-/******/ })();
-/******/ 
-/******/ /* webpack/runtime/define property getters */
-/******/ (() => {
-/******/ 	// define getter functions for harmony exports
-/******/ 	__nccwpck_require__.d = (exports, definition) => {
-/******/ 		for(var key in definition) {
-/******/ 			if(__nccwpck_require__.o(definition, key) && !__nccwpck_require__.o(exports, key)) {
-/******/ 				Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
-/******/ 			}
-/******/ 		}
-/******/ 	};
-/******/ })();
-/******/ 
-/******/ /* webpack/runtime/hasOwnProperty shorthand */
-/******/ (() => {
-/******/ 	__nccwpck_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
-/******/ })();
-/******/ 
-/******/ /* webpack/runtime/make namespace object */
-/******/ (() => {
-/******/ 	// define __esModule on exports
-/******/ 	__nccwpck_require__.r = (exports) => {
-/******/ 		if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-/******/ 			Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 		}
-/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 	};
-/******/ })();
-/******/ 
-/******/ /* webpack/runtime/compat */
-/******/ 
-/******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
-/******/ 
-/************************************************************************/
-var __webpack_exports__ = {};
+/***/ 4653:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+
+// EXPORTS
+__nccwpck_require__.d(__webpack_exports__, {
+  FE: () => (/* reexport */ W3ActionError),
+  X4: () => (/* reexport */ createCommandRouter),
+  H4: () => (/* reexport */ handleError),
+  Em: () => (/* reexport */ request),
+  mI: () => (/* reexport */ setJsonOutput)
+});
+
+// UNUSED EXPORTS: bitcoin, bridge, cleanupMock, createMockCore, ethereum, expectFailed, expectOutput, expectSuccess, getOptionalInput, getOutput, mockAction, parseJsonInput, requireInput, setOutputs, solana, writeSummary
 
 // EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
 var lib_core = __nccwpck_require__(7484);
 ;// CONCATENATED MODULE: ./node_modules/@w3-io/action-core/dist/input.js
 
 /**
- * Parse a JSON input. Returns the parsed value or undefined if empty.
- * Throws with a clear message if the input contains invalid JSON.
+ * Read an input and parse it as JSON. Returns the parsed value.
+ * Throws if the input is missing (when required) or not valid JSON.
  */
-function parseJsonInput(name) {
-    const raw = core.getInput(name);
-    if (!raw.trim())
+function parseJsonInput(name, options) {
+    const raw = core.getInput(name, options);
+    if (!raw)
         return undefined;
-    try {
-        return JSON.parse(raw);
-    }
-    catch {
-        throw new Error(`Input '${name}' is not valid JSON: ${raw.slice(0, 100)}`);
-    }
+    return JSON.parse(raw);
 }
 /**
- * Get a required input. Throws if missing or empty.
+ * Read a required input. Throws if missing.
  */
 function requireInput(name) {
-    const value = core.getInput(name);
-    if (!value.trim()) {
-        throw new Error(`Required input '${name}' is missing`);
-    }
-    return value;
+    return core.getInput(name, { required: true });
 }
 /**
- * Get an optional input with a default value.
+ * Read an optional input. Returns undefined if empty.
  */
-function getOptionalInput(name, defaultValue = "") {
-    const value = core.getInput(name);
-    return value.trim() || defaultValue;
+function getOptionalInput(name) {
+    return core.getInput(name) || undefined;
 }
 
 ;// CONCATENATED MODULE: ./node_modules/@w3-io/action-core/dist/output.js
@@ -27544,7 +27451,9 @@ function setJsonOutput(name, value) {
  */
 function setOutputs(outputs) {
     for (const [key, value] of Object.entries(outputs)) {
-        setJsonOutput(key, value);
+        if (value != null) {
+            setJsonOutput(key, value);
+        }
     }
 }
 
@@ -27589,82 +27498,35 @@ function handleError(error) {
 ;// CONCATENATED MODULE: ./node_modules/@w3-io/action-core/dist/http.js
 
 /**
- * Make an HTTP request with timeout, retry, and structured errors.
+ * Make an HTTP request with JSON body. Returns parsed JSON response.
  *
- * - Retries on 429 and 5xx with exponential backoff
- * - Parses JSON response automatically
- * - Throws W3ActionError with status code on failure
+ * For partner API clients that don't need the bridge.
  */
 async function request(url, options = {}) {
-    const { method = "GET", headers = {}, body, timeout = 30000, retries = 2, retryDelay = 1000, } = options;
-    const init = {
-        method,
-        headers: {
-            "Content-Type": "application/json",
-            ...headers,
-        },
-        signal: AbortSignal.timeout(timeout),
-    };
-    if (body !== undefined) {
-        init.body = typeof body === "string" ? body : JSON.stringify(body);
-    }
-    let lastError;
-    for (let attempt = 0; attempt <= retries; attempt++) {
-        try {
-            const res = await fetch(url, init);
-            const raw = await res.text();
-            let parsed;
-            try {
-                parsed = JSON.parse(raw);
-            }
-            catch {
-                parsed = raw;
-            }
-            const responseHeaders = {};
-            res.headers.forEach((v, k) => {
-                responseHeaders[k] = v;
+    const { method = "GET", headers = {}, body, timeout = 30000 } = options;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: {
+                "Content-Type": "application/json",
+                ...headers,
+            },
+            body: body ? JSON.stringify(body) : undefined,
+            signal: controller.signal,
+        });
+        if (!response.ok) {
+            const text = await response.text().catch(() => "");
+            throw new W3ActionError("HTTP_ERROR", `${response.status}: ${text}`, {
+                statusCode: response.status,
             });
-            if (!res.ok) {
-                // Retry on 429 (rate limit) and 5xx (server error)
-                if ((res.status === 429 || res.status >= 500) &&
-                    attempt < retries) {
-                    await sleep(retryDelay * 2 ** attempt);
-                    continue;
-                }
-                throw new W3ActionError("HTTP_ERROR", `${method} ${url}: ${res.status}`, {
-                    statusCode: res.status,
-                    details: parsed,
-                });
-            }
-            return { status: res.status, headers: responseHeaders, body: parsed, raw };
         }
-        catch (error) {
-            if (error instanceof W3ActionError)
-                throw error;
-            lastError = error instanceof Error ? error : new Error(String(error));
-            if (attempt < retries) {
-                await sleep(retryDelay * 2 ** attempt);
-                continue;
-            }
-        }
+        return (await response.json());
     }
-    throw new W3ActionError("REQUEST_FAILED", `${method} ${url}: ${lastError?.message ?? "unknown error"}`);
-}
-function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-/**
- * Convenience: add API key auth header.
- */
-function apiKeyAuth(key, headerName = "Authorization", prefix = "Bearer") {
-    return { [headerName]: `${prefix} ${key}` };
-}
-/**
- * Convenience: add basic auth header.
- */
-function basicAuth(username, password) {
-    const encoded = Buffer.from(`${username}:${password}`).toString("base64");
-    return { Authorization: `Basic ${encoded}` };
+    finally {
+        clearTimeout(timer);
+    }
 }
 
 ;// CONCATENATED MODULE: ./node_modules/@w3-io/action-core/dist/command.js
@@ -27708,8 +27570,17 @@ function createCommandRouter(commands) {
  *   - $W3_BRIDGE_URL    → TCP URL (macOS Docker Desktop fallback)
  *
  * Usage:
- *   import { bridge } from "@w3-io/action-core";
+ *   import { bridge, ethereum } from "@w3-io/action-core";
  *
+ *   // Typed helpers (recommended — autocomplete + type checking):
+ *   const receipt = await ethereum.callContract({
+ *     contract: "0x...",
+ *     method: "deposit(uint256)",
+ *     args: ["1000000"],
+ *     gasMultiplier: "1.5",
+ *   });
+ *
+ *   // Generic (full control):
  *   const balance = await bridge.chain("ethereum", "get-balance", {
  *     address: "0x...",
  *   });
@@ -27720,29 +27591,17 @@ function createCommandRouter(commands) {
 // ---------------------------------------------------------------------------
 // Transport
 // ---------------------------------------------------------------------------
-/**
- * Resolve the bridge endpoint from environment variables.
- *
- * Returns a fetch-compatible URL and optional Unix socket path.
- */
 function resolveEndpoint() {
     const bridgeUrl = process.env.W3_BRIDGE_URL;
     if (bridgeUrl) {
         return { url: bridgeUrl };
     }
     const socketPath = process.env.W3_BRIDGE_SOCKET ?? "/var/run/w3/bridge.sock";
-    // Node's fetch doesn't support Unix sockets natively.
-    // We use http.request for Unix socket transport.
     return { url: "http://localhost", socketPath };
 }
-/**
- * Make an HTTP request to the bridge. Handles both TCP and Unix socket
- * transports transparently.
- */
 async function bridgeRequest(path, body) {
     const { url, socketPath } = resolveEndpoint();
     if (socketPath) {
-        // Unix socket transport via Node's http module
         const http = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 7067, 19));
         return new Promise((resolve, reject) => {
             const payload = body ? JSON.stringify(body) : undefined;
@@ -27752,7 +27611,9 @@ async function bridgeRequest(path, body) {
                 method: body ? "POST" : "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    ...(payload ? { "Content-Length": Buffer.byteLength(payload) } : {}),
+                    ...(payload
+                        ? { "Content-Length": Buffer.byteLength(payload) }
+                        : {}),
                 },
             }, (res) => {
                 let data = "";
@@ -27764,15 +27625,12 @@ async function bridgeRequest(path, body) {
                             reject(new W3ActionError(err.code ?? "BRIDGE_ERROR", err.error ?? `Bridge returned ${res.statusCode}`, { statusCode: res.statusCode, details: err }));
                         }
                         catch {
-                            reject(new W3ActionError("BRIDGE_ERROR", data || `HTTP ${res.statusCode}`, {
-                                statusCode: res.statusCode,
-                            }));
+                            reject(new W3ActionError("BRIDGE_ERROR", data || `HTTP ${res.statusCode}`, { statusCode: res.statusCode }));
                         }
                         return;
                     }
                     try {
-                        const parsed = JSON.parse(data);
-                        resolve(parsed);
+                        resolve(JSON.parse(data));
                     }
                     catch {
                         resolve(data);
@@ -27811,9 +27669,19 @@ async function bridgeRequest(path, body) {
         return text;
     }
 }
-/**
- * Check if the bridge is available.
- */
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function chainRequest(chainName, action, params, network) {
+    return bridgeRequest(`/${chainName}/${action}`, {
+        network: network ?? chainName,
+        params,
+    });
+}
+// ---------------------------------------------------------------------------
+// Public API — generic
+// ---------------------------------------------------------------------------
 async function health() {
     try {
         const res = (await bridgeRequest("/health"));
@@ -27824,42 +27692,83 @@ async function health() {
     }
 }
 /**
- * Call a chain operation via the bridge.
+ * Execute a chain operation.
  *
- * @param chain - "ethereum", "bitcoin", or "solana"
- * @param action - Operation name (e.g. "get-balance", "transfer", "call-contract")
- * @param params - Action-specific parameters
- * @param network - Network identifier (e.g. "ethereum-sepolia", "avalanche-fuji")
+ * For type-safe calls, use the typed helpers (`ethereum`, `solana`,
+ * `bitcoin`) instead. This generic method accepts any params.
  */
 async function chain(chainName, action, params, network) {
-    return (await bridgeRequest(`/${chainName}/${action}`, {
-        network: network ?? chainName,
-        params,
-    }));
+    return chainRequest(chainName, action, params, network);
 }
-/**
- * Call a crypto operation via the bridge.
- *
- * @param action - Operation name (e.g. "keccak-256", "aes-encrypt", "jwt-create")
- * @param params - Operation-specific parameters
- */
 async function bridge_crypto(action, params) {
     return (await bridgeRequest(`/crypto/${action}`, {
         params,
     }));
 }
+// ---------------------------------------------------------------------------
+// Public API — typed chain helpers
+// ---------------------------------------------------------------------------
+/** Typed Ethereum operations. */
+const ethereum = {
+    getBalance: (params, network) => chainRequest("ethereum", "get-balance", params, network),
+    readContract: (params, network) => chainRequest("ethereum", "read-contract", params, network),
+    callContract: (params, network) => chainRequest("ethereum", "call-contract", params, network),
+    transfer: (params, network) => chainRequest("ethereum", "transfer", params, network),
+    sendTransaction: (params, network) => chainRequest("ethereum", "send-transaction", params, network),
+    deployContract: (params, network) => chainRequest("ethereum", "deploy-contract", params, network),
+    transferToken: (params, network) => chainRequest("ethereum", "transfer-token", params, network),
+    approveToken: (params, network) => chainRequest("ethereum", "approve-token", params, network),
+    transferNft: (params, network) => chainRequest("ethereum", "transfer-nft", params, network),
+    getTransaction: (params, network) => chainRequest("ethereum", "get-transaction", params, network),
+    waitForTransaction: (params, network) => chainRequest("ethereum", "wait-for-transaction", params, network),
+    getEvents: (params, network) => chainRequest("ethereum", "get-events", params, network),
+    resolveName: (params, network) => chainRequest("ethereum", "resolve-name", params, network),
+    getTokenBalance: (params, network) => chainRequest("ethereum", "get-token-balance", params, network),
+    getTokenAllowance: (params, network) => chainRequest("ethereum", "get-token-allowance", params, network),
+    getNftOwner: (params, network) => chainRequest("ethereum", "get-nft-owner", params, network),
+    getNftMetadata: (params, network) => chainRequest("ethereum", "get-nft-metadata", params, network),
+};
+/** Typed Solana operations. */
+const solana = {
+    getBalance: (params, network) => chainRequest("solana", "get-balance", params, network),
+    transfer: (params, network) => chainRequest("solana", "transfer", params, network),
+    transferToken: (params, network) => chainRequest("solana", "transfer-token", params, network),
+    callProgram: (params, network) => chainRequest("solana", "call-program", params, network),
+    getAccount: (params, network) => chainRequest("solana", "get-account", params, network),
+    getTokenBalance: (params, network) => chainRequest("solana", "get-token-balance", params, network),
+    getTokenAccounts: (params, network) => chainRequest("solana", "get-token-accounts", params, network),
+    getTransaction: (params, network) => chainRequest("solana", "get-transaction", params, network),
+    waitForTransaction: (params, network) => chainRequest("solana", "wait-for-transaction", params, network),
+    /** Generate an ephemeral keypair for use as an additional signer. */
+    generateKeypair: () => bridgeRequest("/solana/generate-keypair", {}),
+    /** Get the payer's public key (no secret exposed). */
+    payerAddress: () => bridgeRequest("/solana/payer-address"),
+};
+/** Typed Bitcoin operations. */
+const bitcoin = {
+    getBalance: (params, network) => chainRequest("bitcoin", "get-balance", params, network),
+    send: (params, network) => chainRequest("bitcoin", "send", params, network),
+    getUtxos: (params, network) => chainRequest("bitcoin", "get-utxos", params, network),
+    getTransaction: (params, network) => chainRequest("bitcoin", "get-transaction", params, network),
+    getFeeRate: (params, network) => chainRequest("bitcoin", "get-fee-rate", params ?? {}, network),
+    waitForTransaction: (params, network) => chainRequest("bitcoin", "wait-for-transaction", params, network),
+};
+// ---------------------------------------------------------------------------
+// Default export
+// ---------------------------------------------------------------------------
 /**
- * The bridge client. Import and use:
+ * The bridge client.
  *
- *   import { bridge } from "@w3-io/action-core";
+ *   import { bridge, ethereum, solana, bitcoin } from "@w3-io/action-core";
  *
- *   // Chain operations
+ *   // Typed (recommended):
+ *   const receipt = await ethereum.callContract({ contract, method, args });
+ *   const sig = await solana.callProgram({ programId, accounts, data });
+ *   const tx = await bitcoin.send({ to, amount });
+ *
+ *   // Generic:
  *   const bal = await bridge.chain("ethereum", "get-balance", { address });
- *
- *   // Crypto
  *   const hash = await bridge.crypto("keccak-256", { data: "0x..." });
- *
- *   // Health check
  *   const ok = await bridge.health();
  */
 const bridge = {
@@ -27868,48 +27777,69 @@ const bridge = {
     crypto: bridge_crypto,
 };
 
+;// CONCATENATED MODULE: ./node_modules/@w3-io/action-core/dist/summary.js
+
+/**
+ * Write a job summary safely.
+ *
+ * Wraps `@actions/core` summary with proper `await` and error handling.
+ * The W3 runner sets GITHUB_STEP_SUMMARY and mounts a writable file,
+ * so this works on both GitHub Actions and W3. If the summary file is
+ * unavailable (local dev, CI without summary support), the write is
+ * silently skipped.
+ *
+ * Usage:
+ *   await writeSummary("My Action: deposit", [
+ *     ["Amount", "1000 USDC"],
+ *     ["TX", "`0xabc...`"],
+ *   ]);
+ *
+ *   await writeSummary("My Action: query", result);
+ */
+async function writeSummary(heading, content) {
+    try {
+        core.summary.addHeading(heading, 3);
+        if (typeof content === "string") {
+            core.summary.addRaw(content);
+        }
+        else if (Array.isArray(content)) {
+            // Key-value pairs rendered as markdown
+            for (const [key, value] of content) {
+                core.summary.addRaw(`**${key}:** ${value}\n\n`);
+            }
+        }
+        else {
+            core.summary.addCodeBlock(JSON.stringify(content, null, 2), "json");
+        }
+        await core.summary.write();
+    }
+    catch {
+        // Silently skip — environment may not support job summaries
+    }
+}
+
 ;// CONCATENATED MODULE: ./node_modules/@w3-io/action-core/dist/test.js
 /**
  * Test utilities for W3 actions.
  *
  * Mocks @actions/core so you can test command handlers in isolation
  * without running the full GitHub Actions runtime.
- *
- * Usage:
- *   import { mockAction, expectOutput, expectFailed } from "@w3-io/action-core/test";
- *
- *   test("keccak-256 hashes correctly", async () => {
- *     mockAction({ command: "keccak-256", input: "48656c6c6f" });
- *     await import("../src/index.js");
- *     expectOutput("result", (val) => val.includes("hash"));
- *   });
  */
 let _inputs = {};
 let _outputs = new Map();
 let _failed = null;
-/**
- * Set up mock inputs for the next action invocation.
- * Call this before importing/running the action.
- */
 function mockAction(inputs) {
     _inputs = inputs;
     _outputs = new Map();
     _failed = null;
-    // Mock process.env for @actions/core.getInput()
     for (const [key, value] of Object.entries(inputs)) {
         const envKey = `INPUT_${key.replace(/-/g, "_").toUpperCase()}`;
         process.env[envKey] = value;
     }
 }
-/**
- * Get an output that was set during action execution.
- */
 function getOutput(name) {
     return _outputs.get(name);
 }
-/**
- * Assert an output was set and optionally validate its value.
- */
 function expectOutput(name, validator) {
     const value = _outputs.get(name);
     if (value === undefined) {
@@ -27919,9 +27849,6 @@ function expectOutput(name, validator) {
         throw new Error(`Output "${name}" failed validation. Value: ${value}`);
     }
 }
-/**
- * Assert the action failed with a specific message pattern.
- */
 function expectFailed(pattern) {
     if (_failed === null) {
         throw new Error("Expected action to fail, but it succeeded");
@@ -27935,17 +27862,11 @@ function expectFailed(pattern) {
         }
     }
 }
-/**
- * Assert the action succeeded (did not call setFailed).
- */
 function expectSuccess() {
     if (_failed !== null) {
         throw new Error(`Expected action to succeed, but it failed: "${_failed}"`);
     }
 }
-/**
- * Clean up mock environment after tests.
- */
 function cleanupMock() {
     for (const key of Object.keys(process.env)) {
         if (key.startsWith("INPUT_")) {
@@ -27956,14 +27877,8 @@ function cleanupMock() {
     _outputs = new Map();
     _failed = null;
 }
-/**
- * Create a mock @actions/core module that captures outputs and failures.
- *
- * Use this to intercept setOutput/setFailed calls:
- *   const core = createMockCore();
- *   // pass core to your command handler
- */
 function createMockCore() {
+    const noopChain = () => ({ addRaw: noopChain, addHeading: noopChain, addCodeBlock: noopChain, write: async () => { } });
     return {
         getInput: (name, opts) => {
             const value = _inputs[name] ?? "";
@@ -27982,9 +27897,7 @@ function createMockCore() {
         warning: (_msg) => { },
         error: (_msg) => { },
         debug: (_msg) => { },
-        summary: {
-            addHeading: () => ({ addRaw: () => ({ write: async () => { } }) }),
-        },
+        summary: { addHeading: noopChain, addRaw: noopChain, addCodeBlock: noopChain, write: async () => { } },
     };
 }
 
@@ -27997,7 +27910,170 @@ function createMockCore() {
 
 
 
-;// CONCATENATED MODULE: ./src/pyth.js
+
+
+/***/ }),
+
+/***/ 9722:
+/***/ ((__webpack_module__, __unused_webpack___webpack_exports__, __nccwpck_require__) => {
+
+__nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
+/* harmony import */ var _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(4653);
+/* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(7484);
+/* harmony import */ var _pyth_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(2739);
+
+
+
+
+const router = (0,_w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .createCommandRouter */ .X4)({
+  'get-feeds': async () => {
+    const client = createClient()
+    const query = _actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput('query') || undefined
+    const assetType = _actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput('asset-type') || undefined
+
+    const result = await client.getFeeds({ query, assetType })
+    ;(0,_w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .setJsonOutput */ .mI)('result', result)
+    writeSummary('get-feeds', result)
+  },
+
+  'get-prices': async () => {
+    const client = createClient()
+    const { ids, resolvedSymbols } = await resolveIds(client)
+    const result = await client.getLatestPrices(ids)
+
+    if (resolvedSymbols) {
+      for (const price of result.prices) {
+        const match = resolvedSymbols.find((r) => r.id === price.id)
+        if (match) price.symbol = match.symbol
+      }
+    }
+
+    (0,_w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .setJsonOutput */ .mI)('result', result)
+    writeSummary('get-prices', result)
+  },
+
+  'get-historical-prices': async () => {
+    const client = createClient()
+    const { ids, resolvedSymbols } = await resolveIds(client)
+    const publishTime = _actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput('publish-time')
+
+    if (!publishTime) {
+      throw new _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .W3ActionError */ .FE(
+        'MISSING_PUBLISH_TIME',
+        'publish-time is required for get-historical-prices',
+      )
+    }
+
+    const result = await client.getHistoricalPrices(ids, Number(publishTime))
+
+    if (resolvedSymbols) {
+      for (const price of result.prices) {
+        const match = resolvedSymbols.find((r) => r.id === price.id)
+        if (match) price.symbol = match.symbol
+      }
+    }
+
+    (0,_w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .setJsonOutput */ .mI)('result', result)
+    writeSummary('get-historical-prices', result)
+  },
+})
+
+function createClient() {
+  return new _pyth_js__WEBPACK_IMPORTED_MODULE_2__/* .PythClient */ .z({
+    baseUrl: _actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput('api-url') || undefined,
+  })
+}
+
+/**
+ * Parse a comma-separated input into a trimmed array, or empty array if blank.
+ */
+function parseList(input) {
+  if (!input) return []
+  return input
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
+/**
+ * Resolve IDs from either the `ids` input or the `symbols` input.
+ * If symbols are provided, resolves them to feed IDs via the Pyth API.
+ */
+async function resolveIds(client) {
+  const ids = parseList(_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput('ids'))
+  if (ids.length) return { ids, resolvedSymbols: null }
+
+  const symbols = parseList(_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput('symbols'))
+  if (!symbols.length) {
+    throw new _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .W3ActionError */ .FE('MISSING_IDS', 'Either ids or symbols is required')
+  }
+
+  const resolved = await client.resolveSymbols(symbols)
+  const missing = symbols.filter((s) => !resolved.find((r) => r.symbol === s.toUpperCase()))
+  if (missing.length) {
+    _actions_core__WEBPACK_IMPORTED_MODULE_1__.warning(`Could not resolve symbols: ${missing.join(', ')}`)
+  }
+
+  return {
+    ids: resolved.map((r) => r.id),
+    resolvedSymbols: resolved,
+  }
+}
+
+function writeSummary(command, result) {
+  if (command === 'get-feeds') {
+    _actions_core__WEBPACK_IMPORTED_MODULE_1__.summary
+      .addHeading('Pyth Price Feeds', 3)
+      .addRaw(`Found **${Array.isArray(result) ? result.length : 0}** feeds\n`)
+      .write()
+    return
+  }
+
+  if (!result.prices?.length) return
+
+  const rows = result.prices.map((p) => [
+    p.symbol || p.id.slice(0, 12) + '...',
+    p.price ? `$${p.price.value.toFixed(p.price.expo < -4 ? 6 : 2)}` : '-',
+    p.price ? `\u00b1$${p.price.confidence.toFixed(p.price.expo < -4 ? 6 : 2)}` : '-',
+    p.price?.publishTime ? new Date(p.price.publishTime * 1000).toISOString() : '-',
+  ])
+
+  _actions_core__WEBPACK_IMPORTED_MODULE_1__.summary
+    .addHeading(`Pyth ${command}`, 3)
+    .addTable([
+      [
+        { data: 'Symbol', header: true },
+        { data: 'Price', header: true },
+        { data: 'Confidence', header: true },
+        { data: 'Published', header: true },
+      ],
+      ...rows,
+    ])
+    .write()
+}
+
+try {
+  await router()
+} catch (err) {
+  if (err instanceof _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .W3ActionError */ .FE) {
+    _actions_core__WEBPACK_IMPORTED_MODULE_1__.setFailed(`[${err.code}] ${err.message}`)
+  } else {
+    (0,_w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .handleError */ .H4)(err)
+  }
+}
+
+__webpack_async_result__();
+} catch(e) { __webpack_async_result__(e); } }, 1);
+
+/***/ }),
+
+/***/ 2739:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   z: () => (/* binding */ PythClient)
+/* harmony export */ });
+/* harmony import */ var _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(4653);
 /**
  * Pyth Hermes API client.
  *
@@ -28042,7 +28118,7 @@ class PythClient {
    * @returns {object} Price update with binary and parsed fields
    */
   async getLatestPrices(ids, { parsed = true } = {}) {
-    if (!ids?.length) throw new W3ActionError('MISSING_IDS', 'At least one feed ID is required')
+    if (!ids?.length) throw new _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .W3ActionError */ .FE('MISSING_IDS', 'At least one feed ID is required')
 
     const params = new URLSearchParams()
     for (const id of ids) params.append('ids[]', id)
@@ -28061,8 +28137,8 @@ class PythClient {
    * @returns {object} Price update at the given timestamp
    */
   async getHistoricalPrices(ids, publishTime) {
-    if (!ids?.length) throw new W3ActionError('MISSING_IDS', 'At least one feed ID is required')
-    if (!publishTime) throw new W3ActionError('MISSING_PUBLISH_TIME', 'publish-time is required')
+    if (!ids?.length) throw new _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .W3ActionError */ .FE('MISSING_IDS', 'At least one feed ID is required')
+    if (!publishTime) throw new _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .W3ActionError */ .FE('MISSING_PUBLISH_TIME', 'publish-time is required')
 
     const params = new URLSearchParams()
     for (const id of ids) params.append('ids[]', id)
@@ -28139,145 +28215,194 @@ class PythClient {
   }
 
   async request(url) {
-    const { body } = await request(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-    })
-    return body
-  }
-}
-
-;// CONCATENATED MODULE: ./src/index.js
-
-
-
-
-const router = createCommandRouter({
-  'get-feeds': async () => {
-    const client = createClient()
-    const query = lib_core.getInput('query') || undefined
-    const assetType = lib_core.getInput('asset-type') || undefined
-
-    const result = await client.getFeeds({ query, assetType })
-    setJsonOutput('result', result)
-    writeSummary('get-feeds', result)
-  },
-
-  'get-prices': async () => {
-    const client = createClient()
-    const { ids, resolvedSymbols } = await resolveIds(client)
-    const result = await client.getLatestPrices(ids)
-
-    if (resolvedSymbols) {
-      for (const price of result.prices) {
-        const match = resolvedSymbols.find((r) => r.id === price.id)
-        if (match) price.symbol = match.symbol
+    try {
+      return await (0,_w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .request */ .Em)(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      })
+    } catch (err) {
+      if (err && typeof err === 'object' && 'statusCode' in err) {
+        throw new _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .W3ActionError */ .FE('HTTP_ERROR', err.message, {
+          statusCode: err.statusCode,
+        })
       }
+      throw err
     }
-
-    setJsonOutput('result', result)
-    writeSummary('get-prices', result)
-  },
-
-  'get-historical-prices': async () => {
-    const client = createClient()
-    const { ids, resolvedSymbols } = await resolveIds(client)
-    const publishTime = lib_core.getInput('publish-time')
-
-    if (!publishTime) {
-      throw new W3ActionError(
-        'MISSING_PUBLISH_TIME',
-        'publish-time is required for get-historical-prices',
-      )
-    }
-
-    const result = await client.getHistoricalPrices(ids, Number(publishTime))
-
-    if (resolvedSymbols) {
-      for (const price of result.prices) {
-        const match = resolvedSymbols.find((r) => r.id === price.id)
-        if (match) price.symbol = match.symbol
-      }
-    }
-
-    setJsonOutput('result', result)
-    writeSummary('get-historical-prices', result)
-  },
-})
-
-function createClient() {
-  return new PythClient({
-    baseUrl: lib_core.getInput('api-url') || undefined,
-  })
-}
-
-/**
- * Parse a comma-separated input into a trimmed array, or empty array if blank.
- */
-function parseList(input) {
-  if (!input) return []
-  return input
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-}
-
-/**
- * Resolve IDs from either the `ids` input or the `symbols` input.
- * If symbols are provided, resolves them to feed IDs via the Pyth API.
- */
-async function resolveIds(client) {
-  const ids = parseList(lib_core.getInput('ids'))
-  if (ids.length) return { ids, resolvedSymbols: null }
-
-  const symbols = parseList(lib_core.getInput('symbols'))
-  if (!symbols.length) {
-    throw new W3ActionError('MISSING_IDS', 'Either ids or symbols is required')
-  }
-
-  const resolved = await client.resolveSymbols(symbols)
-  const missing = symbols.filter((s) => !resolved.find((r) => r.symbol === s.toUpperCase()))
-  if (missing.length) {
-    lib_core.warning(`Could not resolve symbols: ${missing.join(', ')}`)
-  }
-
-  return {
-    ids: resolved.map((r) => r.id),
-    resolvedSymbols: resolved,
   }
 }
 
-function writeSummary(command, result) {
-  if (command === 'get-feeds') {
-    lib_core.summary
-      .addHeading('Pyth Price Feeds', 3)
-      .addRaw(`Found **${Array.isArray(result) ? result.length : 0}** feeds\n`)
-      .write()
-    return
-  }
 
-  if (!result.prices?.length) return
+/***/ })
 
-  const rows = result.prices.map((p) => [
-    p.symbol || p.id.slice(0, 12) + '...',
-    p.price ? `$${p.price.value.toFixed(p.price.expo < -4 ? 6 : 2)}` : '-',
-    p.price ? `\u00b1$${p.price.confidence.toFixed(p.price.expo < -4 ? 6 : 2)}` : '-',
-    p.price?.publishTime ? new Date(p.price.publishTime * 1000).toISOString() : '-',
-  ])
-
-  lib_core.summary
-    .addHeading(`Pyth ${command}`, 3)
-    .addTable([
-      [
-        { data: 'Symbol', header: true },
-        { data: 'Price', header: true },
-        { data: 'Confidence', header: true },
-        { data: 'Published', header: true },
-      ],
-      ...rows,
-    ])
-    .write()
-}
-
-router()
-
+/******/ });
+/************************************************************************/
+/******/ // The module cache
+/******/ var __webpack_module_cache__ = {};
+/******/ 
+/******/ // The require function
+/******/ function __nccwpck_require__(moduleId) {
+/******/ 	// Check if module is in cache
+/******/ 	var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 	if (cachedModule !== undefined) {
+/******/ 		return cachedModule.exports;
+/******/ 	}
+/******/ 	// Create a new module (and put it into the cache)
+/******/ 	var module = __webpack_module_cache__[moduleId] = {
+/******/ 		// no module.id needed
+/******/ 		// no module.loaded needed
+/******/ 		exports: {}
+/******/ 	};
+/******/ 
+/******/ 	// Execute the module function
+/******/ 	var threw = true;
+/******/ 	try {
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nccwpck_require__);
+/******/ 		threw = false;
+/******/ 	} finally {
+/******/ 		if(threw) delete __webpack_module_cache__[moduleId];
+/******/ 	}
+/******/ 
+/******/ 	// Return the exports of the module
+/******/ 	return module.exports;
+/******/ }
+/******/ 
+/************************************************************************/
+/******/ /* webpack/runtime/async module */
+/******/ (() => {
+/******/ 	var webpackQueues = typeof Symbol === "function" ? Symbol("webpack queues") : "__webpack_queues__";
+/******/ 	var webpackExports = typeof Symbol === "function" ? Symbol("webpack exports") : "__webpack_exports__";
+/******/ 	var webpackError = typeof Symbol === "function" ? Symbol("webpack error") : "__webpack_error__";
+/******/ 	var resolveQueue = (queue) => {
+/******/ 		if(queue && queue.d < 1) {
+/******/ 			queue.d = 1;
+/******/ 			queue.forEach((fn) => (fn.r--));
+/******/ 			queue.forEach((fn) => (fn.r-- ? fn.r++ : fn()));
+/******/ 		}
+/******/ 	}
+/******/ 	var wrapDeps = (deps) => (deps.map((dep) => {
+/******/ 		if(dep !== null && typeof dep === "object") {
+/******/ 			if(dep[webpackQueues]) return dep;
+/******/ 			if(dep.then) {
+/******/ 				var queue = [];
+/******/ 				queue.d = 0;
+/******/ 				dep.then((r) => {
+/******/ 					obj[webpackExports] = r;
+/******/ 					resolveQueue(queue);
+/******/ 				}, (e) => {
+/******/ 					obj[webpackError] = e;
+/******/ 					resolveQueue(queue);
+/******/ 				});
+/******/ 				var obj = {};
+/******/ 				obj[webpackQueues] = (fn) => (fn(queue));
+/******/ 				return obj;
+/******/ 			}
+/******/ 		}
+/******/ 		var ret = {};
+/******/ 		ret[webpackQueues] = x => {};
+/******/ 		ret[webpackExports] = dep;
+/******/ 		return ret;
+/******/ 	}));
+/******/ 	__nccwpck_require__.a = (module, body, hasAwait) => {
+/******/ 		var queue;
+/******/ 		hasAwait && ((queue = []).d = -1);
+/******/ 		var depQueues = new Set();
+/******/ 		var exports = module.exports;
+/******/ 		var currentDeps;
+/******/ 		var outerResolve;
+/******/ 		var reject;
+/******/ 		var promise = new Promise((resolve, rej) => {
+/******/ 			reject = rej;
+/******/ 			outerResolve = resolve;
+/******/ 		});
+/******/ 		promise[webpackExports] = exports;
+/******/ 		promise[webpackQueues] = (fn) => (queue && fn(queue), depQueues.forEach(fn), promise["catch"](x => {}));
+/******/ 		module.exports = promise;
+/******/ 		body((deps) => {
+/******/ 			currentDeps = wrapDeps(deps);
+/******/ 			var fn;
+/******/ 			var getResult = () => (currentDeps.map((d) => {
+/******/ 				if(d[webpackError]) throw d[webpackError];
+/******/ 				return d[webpackExports];
+/******/ 			}))
+/******/ 			var promise = new Promise((resolve) => {
+/******/ 				fn = () => (resolve(getResult));
+/******/ 				fn.r = 0;
+/******/ 				var fnQueue = (q) => (q !== queue && !depQueues.has(q) && (depQueues.add(q), q && !q.d && (fn.r++, q.push(fn))));
+/******/ 				currentDeps.map((dep) => (dep[webpackQueues](fnQueue)));
+/******/ 			});
+/******/ 			return fn.r ? promise : getResult();
+/******/ 		}, (err) => ((err ? reject(promise[webpackError] = err) : outerResolve(exports)), resolveQueue(queue)));
+/******/ 		queue && queue.d < 0 && (queue.d = 0);
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/create fake namespace object */
+/******/ (() => {
+/******/ 	var getProto = Object.getPrototypeOf ? (obj) => (Object.getPrototypeOf(obj)) : (obj) => (obj.__proto__);
+/******/ 	var leafPrototypes;
+/******/ 	// create a fake namespace object
+/******/ 	// mode & 1: value is a module id, require it
+/******/ 	// mode & 2: merge all properties of value into the ns
+/******/ 	// mode & 4: return value when already ns object
+/******/ 	// mode & 16: return value when it's Promise-like
+/******/ 	// mode & 8|1: behave like require
+/******/ 	__nccwpck_require__.t = function(value, mode) {
+/******/ 		if(mode & 1) value = this(value);
+/******/ 		if(mode & 8) return value;
+/******/ 		if(typeof value === 'object' && value) {
+/******/ 			if((mode & 4) && value.__esModule) return value;
+/******/ 			if((mode & 16) && typeof value.then === 'function') return value;
+/******/ 		}
+/******/ 		var ns = Object.create(null);
+/******/ 		__nccwpck_require__.r(ns);
+/******/ 		var def = {};
+/******/ 		leafPrototypes = leafPrototypes || [null, getProto({}), getProto([]), getProto(getProto)];
+/******/ 		for(var current = mode & 2 && value; typeof current == 'object' && !~leafPrototypes.indexOf(current); current = getProto(current)) {
+/******/ 			Object.getOwnPropertyNames(current).forEach((key) => (def[key] = () => (value[key])));
+/******/ 		}
+/******/ 		def['default'] = () => (value);
+/******/ 		__nccwpck_require__.d(ns, def);
+/******/ 		return ns;
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/define property getters */
+/******/ (() => {
+/******/ 	// define getter functions for harmony exports
+/******/ 	__nccwpck_require__.d = (exports, definition) => {
+/******/ 		for(var key in definition) {
+/******/ 			if(__nccwpck_require__.o(definition, key) && !__nccwpck_require__.o(exports, key)) {
+/******/ 				Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 			}
+/******/ 		}
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/hasOwnProperty shorthand */
+/******/ (() => {
+/******/ 	__nccwpck_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/make namespace object */
+/******/ (() => {
+/******/ 	// define __esModule on exports
+/******/ 	__nccwpck_require__.r = (exports) => {
+/******/ 		if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 			Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 		}
+/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/compat */
+/******/ 
+/******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
+/******/ 
+/************************************************************************/
+/******/ 
+/******/ // startup
+/******/ // Load entry module and return exports
+/******/ // This entry module used 'module' so it can't be inlined
+/******/ var __webpack_exports__ = __nccwpck_require__(9722);
+/******/ __webpack_exports__ = await __webpack_exports__;
+/******/ 

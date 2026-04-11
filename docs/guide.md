@@ -32,21 +32,21 @@ and more via the Pyth Network Hermes API. No API key required.
 
 List available price feeds with optional filtering.
 
-| Input | Required | Description |
-|-------|----------|-------------|
-| `query` | no | Case-insensitive substring match (e.g. `"BTC"`) |
-| `asset-type` | no | Filter by type: `crypto`, `equity`, `fx`, `metal`, `rates`, `commodities`, `crypto_index` |
+| Input        | Required | Description                                                                               |
+| ------------ | -------- | ----------------------------------------------------------------------------------------- |
+| `query`      | no       | Case-insensitive substring match (e.g. `"BTC"`)                                           |
+| `asset-type` | no       | Filter by type: `crypto`, `equity`, `fx`, `metal`, `rates`, `commodities`, `crypto_index` |
 
 ### get-prices
 
 Get latest prices. Accepts feed IDs or human-readable symbols.
 
-| Input | Required | Description |
-|-------|----------|-------------|
-| `ids` | no* | Comma-separated feed IDs (hex) |
-| `symbols` | no* | Comma-separated symbols (e.g. `"BTC,ETH"`) |
+| Input     | Required | Description                                |
+| --------- | -------- | ------------------------------------------ |
+| `ids`     | no\*     | Comma-separated feed IDs (hex)             |
+| `symbols` | no\*     | Comma-separated symbols (e.g. `"BTC,ETH"`) |
 
-*One of `ids` or `symbols` is required. Symbols are resolved to USD feed IDs.
+\*One of `ids` or `symbols` is required. Symbols are resolved to USD feed IDs.
 
 **Output:**
 
@@ -57,12 +57,12 @@ Get latest prices. Accepts feed IDs or human-readable symbols.
       "id": "e62df6c8...",
       "symbol": "BTC",
       "price": {
-        "value": 87452.30,
-        "confidence": 12.00,
+        "value": 87452.3,
+        "confidence": 12.0,
         "expo": -8,
         "publishTime": 1710756000
       },
-      "emaPrice": { "value": 87400.00, "..." : "..." },
+      "emaPrice": { "value": 87400.0, "...": "..." },
       "metadata": { "slot": 12345678 }
     }
   ]
@@ -73,10 +73,10 @@ Get latest prices. Accepts feed IDs or human-readable symbols.
 
 Same as `get-prices` but at a specific point in time.
 
-| Input | Required | Description |
-|-------|----------|-------------|
-| `ids` or `symbols` | yes | Same as get-prices |
-| `publish-time` | yes | Unix timestamp in seconds |
+| Input              | Required | Description               |
+| ------------------ | -------- | ------------------------- |
+| `ids` or `symbols` | yes      | Same as get-prices        |
+| `publish-time`     | yes      | Unix timestamp in seconds |
 
 ## Examples
 
@@ -88,7 +88,7 @@ Same as `get-prices` but at a specific point in time.
   uses: w3-io/w3-pyth-action@v1
   with:
     command: get-prices
-    symbols: "ETH"
+    symbols: 'ETH'
 
 - name: Execute trade if below threshold
   if: fromJSON(steps.price.outputs.result).prices[0].price.value < 3000
@@ -117,10 +117,10 @@ attestations. The same attestation can be submitted as part of a
 smart contract transaction, where the on-chain Pyth contract verifies
 the publisher signature cryptographically.
 
-| Layer | What | Trust model |
-|-------|------|-------------|
-| This action (off-chain) | Workflow decisions: should I trade? Is the price right? | Signed data, verified by the workflow |
-| Pyth on-chain contract | Smart contract enforcement: release funds only if price is verified | Cryptographic proof on-chain |
+| Layer                   | What                                                                | Trust model                           |
+| ----------------------- | ------------------------------------------------------------------- | ------------------------------------- |
+| This action (off-chain) | Workflow decisions: should I trade? Is the price right?             | Signed data, verified by the workflow |
+| Pyth on-chain contract  | Smart contract enforcement: release funds only if price is verified | Cryptographic proof on-chain          |
 
 Think of it as **client-side vs. server-side validation**: the action
 is where you decide; the smart contract is where you enforce. Neither

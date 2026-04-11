@@ -6,7 +6,7 @@ on:
       symbols:
         description: Comma-separated token symbols
         required: true
-        default: "BTC,ETH,SOL"
+        default: 'BTC,ETH,SOL'
 
 jobs:
   prices:
