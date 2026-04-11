@@ -129,4 +129,12 @@ function writeSummary(command, result) {
     .write()
 }
 
-router()
+try {
+  await router()
+} catch (err) {
+  if (err instanceof W3ActionError) {
+    core.setFailed(`[${err.code}] ${err.message}`)
+  } else {
+    handleError(err)
+  }
+}

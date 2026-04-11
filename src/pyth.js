@@ -139,10 +139,18 @@ export class PythClient {
   }
 
   async request(url) {
-    const { body } = await request(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-    })
-    return body
+    try {
+      return await request(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      })
+    } catch (err) {
+      if (err && typeof err === 'object' && 'statusCode' in err) {
+        throw new W3ActionError('HTTP_ERROR', err.message, {
+          statusCode: err.statusCode,
+        })
+      }
+      throw err
+    }
   }
 }
