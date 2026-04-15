@@ -1,0 +1,86 @@
+# E2E Test Workflow
+#
+# Exercises every command against real APIs/contracts.
+# Run on a local W3 network with:
+#   w3 workflow deploy test/workflows/e2e.yaml
+#   w3 workflow "Pyth E2E" trigger
+#
+# Prerequisites:
+#   - W3 local network running (make dev)
+#   - No env vars needed (public Hermes API)
+
+name: Pyth E2E
+on:
+  workflow_dispatch: {}
+
+jobs:
+  reads:
+    runs-on: ubuntu-latest
+    steps:
+      # ── get-feeds: search by query ────────────────────────────
+      - uses: w3-io/w3-pyth-action@main
+        id: feeds-query
+        with:
+          command: get-feeds
+          query: BTC
+
+      # ── get-feeds: filter by asset type ───────────────────────
+      - uses: w3-io/w3-pyth-action@main
+        id: feeds-crypto
+        with:
+          command: get-feeds
+          asset-type: crypto
+
+      # ── get-feeds: filter by asset type (fx) ──────────────────
+      - uses: w3-io/w3-pyth-action@main
+        id: feeds-fx
+        with:
+          command: get-feeds
+          asset-type: fx
+
+      # ── get-prices: by symbol ─────────────────────────────────
+      - uses: w3-io/w3-pyth-action@main
+        id: prices-symbol
+        with:
+          command: get-prices
+          symbols: BTC,ETH,SOL
+
+      # ── get-prices: by feed ID (BTC/USD) ──────────────────────
+      - uses: w3-io/w3-pyth-action@main
+        id: prices-id
+        with:
+          command: get-prices
+          ids: 'e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43'
+
+      # ── get-historical-prices: by symbol + timestamp ──────────
+      - uses: w3-io/w3-pyth-action@main
+        id: historical-symbol
+        with:
+          command: get-historical-prices
+          symbols: ETH
+          publish-time: '1700000000'
+
+      # ── get-historical-prices: by feed ID + timestamp ─────────
+      - uses: w3-io/w3-pyth-action@main
+        id: historical-id
+        with:
+          command: get-historical-prices
+          ids: 'ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace'
+          publish-time: '1700000000'
+
+      # ── Summary ───────────────────────────────────────────────
+      - run: |
+          echo "=== Feeds (BTC query) ==="
+          echo "${{ steps.feeds-query.outputs.result }}"
+          echo "=== Feeds (crypto) ==="
+          echo "${{ steps.feeds-crypto.outputs.result }}"
+          echo "=== Feeds (fx) ==="
+          echo "${{ steps.feeds-fx.outputs.result }}"
+          echo "=== Prices (symbols) ==="
+          echo "${{ steps.prices-symbol.outputs.result }}"
+          echo "=== Prices (feed ID) ==="
+          echo "${{ steps.prices-id.outputs.result }}"
+          echo "=== Historical (symbol) ==="
+          echo "${{ steps.historical-symbol.outputs.result }}"
+          echo "=== Historical (feed ID) ==="
+          echo "${{ steps.historical-id.outputs.result }}"
