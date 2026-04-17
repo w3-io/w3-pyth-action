@@ -3,6 +3,16 @@ partner: pyth
 name: Pyth Price Oracle
 version: 1.0.0
 repo: w3-io/w3-pyth-action
+description: >
+  Pyth Network price oracle with sub-second latency. Pull-based
+  price feeds across 500+ assets on 50+ chains. Prices include
+  confidence intervals and publish timestamps.
+context: >
+  Use Pyth when the workflow needs low-latency price data with
+  confidence bounds — Pyth updates every 400ms. For on-chain
+  verified prices with longer update intervals, use Chainlink.
+  Reads are free (no API key needed). Prices include a confidence
+  interval showing data quality.
 commands:
   - name: get-feeds
     description: >
