@@ -58512,7 +58512,10 @@ const VIEM_CHAINS = Object.freeze({
   polygon: polygon,
 })
 
-const PYTH_ABI = (0,parseAbi/* parseAbi */.U)(['function updatePriceFeeds(bytes[] updateData) payable'])
+const PYTH_ABI = (0,parseAbi/* parseAbi */.U)([
+  'function updatePriceFeeds(bytes[] updateData) payable',
+  'function getUpdateFee(bytes[] updateData) view returns (uint256)',
+])
 
 /**
  * Submit a priceUpdateData blob to Pyth's on-chain contract.
@@ -58565,14 +58568,36 @@ async function submitOnChain({ network, updateData, rpcUrl, value = '10000' }) {
   const wallet = createWalletClient({ account, chain, transport })
   const publicClient = createPublicClient({ chain, transport })
 
-  core.info(`submitOnChain: chain=${network} contract=${contract} feeds=${normalized.length} value=${value} from=${account.address}`)
+  // Ask Pyth what it'll actually charge for this exact blob, then
+  // submit with that value (caps unnecessary overpayment + avoids
+  // InsufficientFee reverts when 10000 wei isn't enough). Hardcoded
+  // ceilings exist for safety against contract bugs returning huge
+  // numbers — 1 AVAX is absurdly more than any real Pyth fee.
+  const requiredFee = await publicClient.readContract({
+    address: contract,
+    abi: PYTH_ABI,
+    functionName: 'getUpdateFee',
+    args: [normalized],
+  })
+  const userValue = BigInt(value)
+  const txValue = requiredFee > userValue ? requiredFee : userValue
+  if (txValue > BigInt('1000000000000000000')) {
+    throw new dist/* W3ActionError */.FE(
+      'EXCESSIVE_FEE',
+      `Pyth.getUpdateFee returned ${txValue} wei (>1 AVAX) — refusing to submit`,
+    )
+  }
+
+  core.info(
+    `submitOnChain: chain=${network} feeds=${normalized.length} fee=${requiredFee} sending=${txValue} from=${account.address}`,
+  )
 
   const hash = await wallet.writeContract({
     address: contract,
     abi: PYTH_ABI,
     functionName: 'updatePriceFeeds',
     args: [normalized],
-    value: BigInt(value),
+    value: txValue,
   })
 
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
