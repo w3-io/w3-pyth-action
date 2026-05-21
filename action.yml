@@ -4,7 +4,7 @@ author: 'w3-io'
 
 inputs:
   command:
-    description: 'Operation to perform: get-feeds, get-prices, get-historical-prices'
+    description: 'Operation to perform: get-feeds, get-prices, get-historical-prices, submit-on-chain'
     required: true
   api-url:
     description: 'Pyth Hermes API base URL (override for testing/staging)'
@@ -25,6 +25,21 @@ inputs:
   publish-time:
     description: 'Unix timestamp for get-historical-prices'
     required: false
+
+  # submit-on-chain inputs
+  network:
+    description: 'EVM chain key for submit-on-chain (avalanche, ethereum, base, arbitrum, optimism, polygon)'
+    required: false
+  update-data:
+    description: 'JSON array of hex strings (the `binary.data` field from a get-prices step), or a single hex string'
+    required: false
+  rpc-url:
+    description: 'Custom RPC URL for submit-on-chain (defaults to the protocol default for `network`)'
+    required: false
+  value:
+    description: 'msg.value (wei) for submit-on-chain — must be ≥ Pyth.getUpdateFee(updateData). Default 10000.'
+    required: false
+    default: '10000'
 
 outputs:
   result:

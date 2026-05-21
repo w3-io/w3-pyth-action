@@ -45,29 +45,25 @@ jobs:
           command: get-prices
           symbols: BTC,ETH,XAU,AAPL
 
-      # ── 2. On-chain price commit (Pull Oracle) ───────────────────
-      # Submit the binary blob Hermes returned to Pyth's contract on
-      # Avalanche. After this lands, any contract on Avalanche can
-      # call Pyth.getPriceNoOlderThan(feedId, maxAgeSec) and observe
-      # the exact same price the off-chain worker did — and reject
-      # the transaction if reality drifted.
+      # ── 2. On-chain price commit (Pyth Pull Oracle) ──────────────
+      # Forward the binary blob from step 1 to Pyth's Avalanche
+      # contract via updatePriceFeeds(bytes[]). Encoding + signing
+      # are handled inside the action via the W3 bridge — no private
+      # key enters this container. After this lands, any Avalanche
+      # contract can call Pyth.getPriceNoOlderThan(feedId, maxAge)
+      # and observe the same price the off-chain worker saw — and
+      # revert if reality drifted.
       - name: Commit observation on-chain (Pyth Pull Oracle)
         id: pyth_commit
-        ethereum:
+        uses: w3-io/w3-pyth-action@main
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.PYTH_COOKBOOK_SIGNING_KEY }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: submit-on-chain
           network: avalanche
-          signer: '${{ secrets.PYTH_COOKBOOK_SIGNING_KEY }}'
-          write:
-            call-contract:
-              # Pyth Pull Oracle on Avalanche C-Chain mainnet.
-              contract: '0x4305FB66699C3B2702D4d05CF36551390A4c69C6'
-              method: 'updatePriceFeeds(bytes[])'
-              args:
-                # Hermes returns { binary: { data: ["..hex..", ...] } };
-                # data is exactly the bytes[] Pyth expects.
-                - '${{ fromJSON(steps.prices.outputs.result).binary.data }}'
-              # Pyth charges a small per-feed fee on update. 10000 wei
-              # covers many feeds on Avalanche with margin; excess is
-              # kept by the contract, so don't overpay by orders of
-              # magnitude.
-              value: '10000'
-              rpcUrl: '${{ secrets.AVALANCHE_RPC_URL }}'
+          # The binary blob arrives as a JSON array of hex strings —
+          # exactly the bytes[] shape updatePriceFeeds expects.
+          update-data: ${{ toJSON(fromJSON(steps.prices.outputs.result).binary.data) }}
+          rpc-url: ${{ secrets.AVALANCHE_RPC_URL }}
