@@ -28185,11 +28185,15 @@ async function submitOnChain({ network, updateData, rpcUrl, value = '10000' }) {
     typeof d === 'string' && d.startsWith('0x') ? d : '0x' + d,
   )
 
-  // Pyth.updatePriceFeeds(bytes[] updateData) payable
+  // Pyth.updatePriceFeeds(bytes[] updateData) payable.
+  // Method signature: bare form (no `function` prefix) matches
+  // alloy-dyn-abi's expectations for the bridge's parser. The
+  // `bytes[]` arg is passed as args[0] = array of 0x-prefixed hex
+  // strings — one per VAA-signed price update from Hermes.
   const result = await _w3_io_action_core__WEBPACK_IMPORTED_MODULE_1__/* .ethereum */ .uk.callContract(
     {
       contract,
-      method: 'function updatePriceFeeds(bytes[])',
+      method: 'updatePriceFeeds(bytes[])',
       args: [normalized],
       value,
       ...(rpcUrl ? { rpcUrl } : {}),
