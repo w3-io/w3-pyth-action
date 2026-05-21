@@ -28186,14 +28186,24 @@ async function submitOnChain({ network, updateData, rpcUrl, value = '10000' }) {
   )
 
   // Pyth.updatePriceFeeds(bytes[] updateData) payable.
-  // Method signature: bare form (no `function` prefix) matches
-  // alloy-dyn-abi's expectations for the bridge's parser. The
-  // `bytes[]` arg is passed as args[0] = array of 0x-prefixed hex
-  // strings — one per VAA-signed price update from Hermes.
+  // Pass the full ABI JSON alongside the method name. The bridge's
+  // alloy-dyn-abi parser rejects bytes[] when given only the bare
+  // signature; supplying the explicit ABI sidesteps the inference.
+  // (Same pattern morpho uses for tuple-typed inputs.)
+  const PYTH_UPDATE_ABI = JSON.stringify([
+    {
+      name: 'updatePriceFeeds',
+      type: 'function',
+      stateMutability: 'payable',
+      inputs: [{ name: 'updateData', type: 'bytes[]' }],
+      outputs: [],
+    },
+  ])
   const result = await _w3_io_action_core__WEBPACK_IMPORTED_MODULE_1__/* .ethereum */ .uk.callContract(
     {
       contract,
-      method: 'updatePriceFeeds(bytes[])',
+      method: 'updatePriceFeeds',
+      abi: PYTH_UPDATE_ABI,
       args: [normalized],
       value,
       ...(rpcUrl ? { rpcUrl } : {}),
