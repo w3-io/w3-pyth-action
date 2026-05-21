@@ -12,6 +12,7 @@
  * exposed to the action.
  */
 
+import * as core from '@actions/core'
 import { ethereum, W3ActionError } from '@w3-io/action-core'
 
 /**
@@ -78,9 +79,13 @@ export async function submitOnChain({ network, updateData, rpcUrl, value = '1000
     network,
   )
 
+  // Diagnostic — keep until txHash / blockNumber consistently surface.
+  // Logs land in the step's logs section in the explorer.
+  core.info(`bridge result keys: ${Object.keys(result || {}).join(', ')}`)
+  core.info(`bridge result raw: ${JSON.stringify(result)}`)
+
   return {
-    txHash: result.txHash || result.transactionHash,
-    blockNumber: result.blockNumber ?? null,
+    ...result,
     chain: network,
     contract,
     feedCount: normalized.length,

@@ -28114,7 +28114,8 @@ __webpack_async_result__();
 /* harmony export */   T: () => (/* binding */ submitOnChain)
 /* harmony export */ });
 /* unused harmony export PYTH_CONTRACTS */
-/* harmony import */ var _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(4653);
+/* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7484);
+/* harmony import */ var _w3_io_action_core__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(4653);
 /**
  * Pyth on-chain operations.
  *
@@ -28128,6 +28129,7 @@ __webpack_async_result__();
  * key sits behind the bridge, addressed via the `W3_SECRET_*` env
  * exposed to the action.
  */
+
 
 
 
@@ -28164,14 +28166,14 @@ const PYTH_CONTRACTS = Object.freeze({
  */
 async function submitOnChain({ network, updateData, rpcUrl, value = '10000' }) {
   if (!network) {
-    throw new _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .W3ActionError */ .FE('MISSING_NETWORK', 'network is required')
+    throw new _w3_io_action_core__WEBPACK_IMPORTED_MODULE_1__/* .W3ActionError */ .FE('MISSING_NETWORK', 'network is required')
   }
   const contract = PYTH_CONTRACTS[network]
   if (!contract) {
-    throw new _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .W3ActionError */ .FE('UNKNOWN_NETWORK', `Pyth not configured for: ${network}`)
+    throw new _w3_io_action_core__WEBPACK_IMPORTED_MODULE_1__/* .W3ActionError */ .FE('UNKNOWN_NETWORK', `Pyth not configured for: ${network}`)
   }
   if (!Array.isArray(updateData) || updateData.length === 0) {
-    throw new _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .W3ActionError */ .FE(
+    throw new _w3_io_action_core__WEBPACK_IMPORTED_MODULE_1__/* .W3ActionError */ .FE(
       'MISSING_UPDATE_DATA',
       'update-data must be a non-empty array of hex strings from Hermes binary.data',
     )
@@ -28184,7 +28186,7 @@ async function submitOnChain({ network, updateData, rpcUrl, value = '10000' }) {
   )
 
   // Pyth.updatePriceFeeds(bytes[] updateData) payable
-  const result = await _w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .ethereum */ .uk.callContract(
+  const result = await _w3_io_action_core__WEBPACK_IMPORTED_MODULE_1__/* .ethereum */ .uk.callContract(
     {
       contract,
       method: 'function updatePriceFeeds(bytes[])',
@@ -28195,9 +28197,13 @@ async function submitOnChain({ network, updateData, rpcUrl, value = '10000' }) {
     network,
   )
 
+  // Diagnostic — keep until txHash / blockNumber consistently surface.
+  // Logs land in the step's logs section in the explorer.
+  _actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`bridge result keys: ${Object.keys(result || {}).join(', ')}`)
+  _actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`bridge result raw: ${JSON.stringify(result)}`)
+
   return {
-    txHash: result.txHash || result.transactionHash,
-    blockNumber: result.blockNumber ?? null,
+    ...result,
     chain: network,
     contract,
     feedCount: normalized.length,
