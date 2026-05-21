@@ -13,6 +13,12 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # `@w3-io/action-lint` is a private package in the w3-io org;
+    # GITHUB_TOKEN only has access to the current repo's packages,
+    # so we need a PAT with `read:packages`. See W3_NPM_TOKEN repo
+    # secret — mirrors the pattern in w3-action-template's CI.
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.W3_NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -24,8 +30,6 @@ jobs:
           scope: '@w3-io'
 
       - run: npm ci
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Standards lint
         run: npx @w3-io/action-lint@latest

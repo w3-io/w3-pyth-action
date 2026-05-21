@@ -1,6 +1,7 @@
 import { createCommandRouter, setJsonOutput, handleError, W3ActionError } from '@w3-io/action-core'
 import * as core from '@actions/core'
 import { PythClient } from './pyth.js'
+import { submitOnChain } from './onchain.js'
 
 const router = createCommandRouter({
   'get-feeds': async () => {
@@ -27,6 +28,43 @@ const router = createCommandRouter({
 
     setJsonOutput('result', result)
     writeSummary('get-prices', result)
+  },
+
+  'submit-on-chain': async () => {
+    const network = core.getInput('network')
+    if (!network) {
+      throw new W3ActionError('MISSING_NETWORK', 'network is required for submit-on-chain')
+    }
+    // update-data can come in two shapes:
+    //   1. From the prior get-prices step: a JSON array string like
+    //      '["abc...", "def..."]' resolved via fromJSON()
+    //   2. Manual: a single hex string (rare; mostly for testing)
+    const updateDataInput = core.getInput('update-data')
+    if (!updateDataInput) {
+      throw new W3ActionError(
+        'MISSING_UPDATE_DATA',
+        'update-data is required (pass the binary.data array from a prior get-prices step)',
+      )
+    }
+    let updateData
+    try {
+      updateData = JSON.parse(updateDataInput)
+    } catch {
+      // Not JSON — treat as a single hex string.
+      updateData = [updateDataInput]
+    }
+    if (!Array.isArray(updateData)) updateData = [updateData]
+
+    const rpcUrl = core.getInput('rpc-url') || undefined
+    const value = core.getInput('value') || undefined
+
+    const result = await submitOnChain({ network, updateData, rpcUrl, value })
+    setJsonOutput('result', result)
+    core.summary
+      .addHeading('Pyth on-chain commit', 3)
+      .addRaw(`Submitted **${result.feedCount}** price update(s) to Pyth on **${result.chain}**\n`)
+      .addRaw(`Tx: \`${result.txHash}\`\n`)
+      .write()
   },
 
   'get-historical-prices': async () => {

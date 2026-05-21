@@ -73,3 +73,110 @@ commands:
       result:
         type: object
         description: Same structure as get-prices at the requested timestamp
+
+  - name: submit-on-chain
+    description: >
+      Submit a Hermes priceUpdateData blob to Pyth's on-chain Pull Oracle
+      contract. Pairs with get-prices to commit the same observation on
+      chain so a downstream contract can verify the price band against
+      what the worker saw off-chain. Signing key comes from
+      W3_SECRET_ETHEREUM in the namespace's secret store.
+    inputs:
+      network:
+        type: string
+        required: true
+        description: >
+          Chain key: avalanche, ethereum, base, arbitrum, optimism, polygon.
+          Pyth contract address is resolved from this.
+      update-data:
+        type: string
+        required: true
+        description: >
+          JSON array of hex strings (the `binary.data` field from a
+          prior get-prices step), or a single hex string.
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC URL (overrides the default for `network`).
+      value:
+        type: string
+        required: false
+        description: >
+          msg.value in wei. Defaults to Pyth.getUpdateFee(updateData)
+          queried before submission.
+    outputs:
+      result:
+        type: object
+        description: >
+          { txHash, blockNumber, gasUsed, chain, contract, feedCount, from, status }
+
+# ── Display block ──────────────────────────────────────────────────
+#
+# Consumed by the W3 Explorer to render branded step cards. Mirrors
+# the schema documented in
+# https://github.com/w3-io/w3-action-template/blob/main/docs/display-schema.md.
+#
+# The explorer fetches THIS file at runtime — no per-action code on
+# the explorer side. Update the display block here; the change goes
+# live the next time a workflow uses this action's `@<ref>`.
+
+display:
+  brand:
+    name: 'Pyth'
+    short_name: 'Pyth'
+    description: 'Price feeds for crypto, equities, FX, metals, and more'
+    # Pinned to the same ref as PR #6 so the logo is available before
+    # this PR merges to main. Flip to `/main/` after merge.
+    logo: 'https://raw.githubusercontent.com/w3-io/w3-pyth-action/audie/expose-binary-blob/assets/logo.png'
+    # Pyth's signature lavender. Tints the per-command icon when the
+    # brand logo isn't loaded (PNG fetch failure or pre-load).
+    color: '#E6DAFE'
+  commands:
+    get-prices:
+      icon: 'pyth'
+      title_template: 'Pyth Hermes — {{ inputs.symbols }}'
+      subtitle_template: 'off-chain snapshot, with confidence bands'
+      summary:
+        - { label: 'Symbols', value: '{{ inputs.symbols }}' }
+        - { label: 'Feeds returned', value: '{{ outputs.result.prices | length }}' }
+        # binary.data is array-of-hex-strings (one VAA per entry);
+        # `length` counts updates, not characters.
+        - { label: 'Binary blob', value: '{{ outputs.result.binary.data | length }} update(s)' }
+
+    get-feeds:
+      icon: 'info'
+      title_template: 'Pyth — list feeds'
+      subtitle_template: "{{ inputs.asset-type | default: 'all asset types' }}"
+      summary:
+        - { label: 'Asset type', value: '{{ inputs.asset-type }}' }
+        - { label: 'Query', value: '{{ inputs.query }}' }
+        - { label: 'Feeds returned', value: '{{ outputs.result.feeds | length }}' }
+
+    get-historical-prices:
+      icon: 'info'
+      title_template: 'Pyth Hermes — historical {{ inputs.symbols }}'
+      # `default:` covers the preview / not-yet-run state.
+      subtitle_template: "{{ inputs.publish-time | default: 'point-in-time read' }}"
+      summary:
+        - { label: 'Symbols', value: '{{ inputs.symbols }}' }
+        - { label: 'Publish time', value: '{{ inputs.publish-time }}' }
+        - { label: 'Feeds returned', value: '{{ outputs.result.prices | length }}' }
+
+    submit-on-chain:
+      icon: 'lock'
+      title_template: 'Commit prices on-chain · {{ inputs.network | chain_pretty }}'
+      subtitle_template: '{{ outputs.result.feedCount }} update(s) → Pyth.updatePriceFeeds()'
+      summary:
+        - { label: 'Network', value: '{{ inputs.network | chain_pretty }}' }
+        - { label: 'Pyth contract', value: '{{ outputs.result.contract | truncate_addr }}' }
+        - { label: 'Updates committed', value: '{{ outputs.result.feedCount }}' }
+        - { label: 'Block', value: '{{ outputs.result.blockNumber }}' }
+        - { label: 'Tx', value: '{{ outputs.result.txHash | truncate_addr }}' }
+      tx_hash_path: 'outputs.result.txHash'
+      chain_explorer:
+        avalanche: 'https://snowtrace.io/tx/{{tx_hash}}'
+        ethereum: 'https://etherscan.io/tx/{{tx_hash}}'
+        base: 'https://basescan.org/tx/{{tx_hash}}'
+        arbitrum: 'https://arbiscan.io/tx/{{tx_hash}}'
+        optimism: 'https://optimistic.etherscan.io/tx/{{tx_hash}}'
+        polygon: 'https://polygonscan.com/tx/{{tx_hash}}'

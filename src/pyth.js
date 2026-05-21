@@ -103,9 +103,16 @@ export class PythClient {
 
   /**
    * Format raw price update response into a cleaner structure.
+   *
+   * Returns both the human-readable `parsed` data (as `prices[]`) AND
+   * Hermes' `binary` blob — the latter is the priceUpdateData payload
+   * a consumer submits to Pyth's on-chain contract via
+   * `updatePriceFeeds(bytes[])`, which lets a downstream EVM step
+   * verify the same observation that triggered the off-chain decision.
    */
   formatPriceUpdate(data) {
-    if (!data.parsed) return { prices: [] }
+    const binary = data.binary ?? null
+    if (!data.parsed) return { prices: [], binary }
 
     return {
       prices: data.parsed.map((entry) => ({
@@ -118,6 +125,7 @@ export class PythClient {
           slot: entry.metadata?.slot ?? null,
         },
       })),
+      binary,
     }
   }
 
