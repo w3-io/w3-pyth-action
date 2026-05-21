@@ -1,0 +1,73 @@
+# Cookbook recipe — Off-chain Trigger, On-chain Price Guard
+#
+# Pattern: Pyth gives you two endpoints with a shared origin.
+#
+#   Off-chain (Hermes API) — cheap, fast, multi-asset. Your worker
+#   reads it to DECIDE whether to act at all. Like client-side form
+#   validation.
+#
+#   On-chain (Pull Oracle) — submit the SAME observation Hermes gave
+#   you, then read it back from within a contract to ENFORCE the
+#   price band at execution time. Like server-side form validation.
+#
+# Used together, the off-chain decision and the on-chain enforcement
+# share a single price observation. A frontrunner who moves the
+# market between your worker reading Hermes and your tx landing
+# cannot trick your contract into executing on a stale band — the
+# contract reads the same price your worker saw, refuses to execute
+# if it drifted.
+#
+# This recipe demos the wiring. A production rebalancer would chain
+#     updatePriceFeeds(...) -> getPriceNoOlderThan(...) -> band check -> swap
+# inside a single atomic transaction. We stop at the update call so
+# the recipe stays vendor-neutral about the swap layer.
+
+name: Pyth — Off-chain Trigger, On-chain Price Guard
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cross-asset-guard:
+    name: Multi-asset snapshot with on-chain price commit
+    runs-on: w3
+    steps:
+      # ── 1. Off-chain price read (Hermes API) ─────────────────────
+      # Read four asset prices in a single call. Pyth covers crypto,
+      # equities, FX, metals, and more — same endpoint, same shape.
+      # Each price ships with a confidence band; production decision
+      # logic should refuse to act when the band is wider than the
+      # strategy can tolerate.
+      - name: Snapshot 4 asset prices via Pyth Hermes
+        id: prices
+        uses: w3-io/w3-pyth-action@main
+        with:
+          command: get-prices
+          symbols: BTC,ETH,XAU,AAPL
+
+      # ── 2. On-chain price commit (Pull Oracle) ───────────────────
+      # Submit the binary blob Hermes returned to Pyth's contract on
+      # Avalanche. After this lands, any contract on Avalanche can
+      # call Pyth.getPriceNoOlderThan(feedId, maxAgeSec) and observe
+      # the exact same price the off-chain worker did — and reject
+      # the transaction if reality drifted.
+      - name: Commit observation on-chain (Pyth Pull Oracle)
+        id: pyth_commit
+        ethereum:
+          network: avalanche
+          signer: '${{ secrets.PYTH_COOKBOOK_SIGNING_KEY }}'
+          write:
+            call-contract:
+              # Pyth Pull Oracle on Avalanche C-Chain mainnet.
+              contract: '0x4305FB66699C3B2702D4d05CF36551390A4c69C6'
+              method: 'updatePriceFeeds(bytes[])'
+              args:
+                # Hermes returns { binary: { data: ["..hex..", ...] } };
+                # data is exactly the bytes[] Pyth expects.
+                - '${{ fromJSON(steps.prices.outputs.result).binary.data }}'
+              # Pyth charges a small per-feed fee on update. 10000 wei
+              # covers many feeds on Avalanche with margin; excess is
+              # kept by the contract, so don't overpay by orders of
+              # magnitude.
+              value: '10000'
+              rpcUrl: '${{ secrets.AVALANCHE_RPC_URL }}'
