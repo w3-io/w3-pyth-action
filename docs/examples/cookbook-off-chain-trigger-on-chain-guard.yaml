@@ -1,0 +1,69 @@
+# Cookbook recipe — Off-chain Trigger, On-chain Price Guard
+#
+# Pattern: Pyth gives you two endpoints with a shared origin.
+#
+#   Off-chain (Hermes API) — cheap, fast, multi-asset. Your worker
+#   reads it to DECIDE whether to act at all. Like client-side form
+#   validation.
+#
+#   On-chain (Pull Oracle) — submit the SAME observation Hermes gave
+#   you, then read it back from within a contract to ENFORCE the
+#   price band at execution time. Like server-side form validation.
+#
+# Used together, the off-chain decision and the on-chain enforcement
+# share a single price observation. A frontrunner who moves the
+# market between your worker reading Hermes and your tx landing
+# cannot trick your contract into executing on a stale band — the
+# contract reads the same price your worker saw, refuses to execute
+# if it drifted.
+#
+# This recipe demos the wiring. A production rebalancer would chain
+#     updatePriceFeeds(...) -> getPriceNoOlderThan(...) -> band check -> swap
+# inside a single atomic transaction. We stop at the update call so
+# the recipe stays vendor-neutral about the swap layer.
+
+name: Pyth — Off-chain Trigger, On-chain Price Guard
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cross-asset-guard:
+    name: Multi-asset snapshot with on-chain price commit
+    runs-on: w3
+    steps:
+      # ── 1. Off-chain price read (Hermes API) ─────────────────────
+      # Read four asset prices in a single call. Pyth covers crypto,
+      # equities, FX, metals, and more — same endpoint, same shape.
+      # Each price ships with a confidence band; production decision
+      # logic should refuse to act when the band is wider than the
+      # strategy can tolerate.
+      - name: Snapshot 4 asset prices via Pyth Hermes
+        id: prices
+        uses: w3-io/w3-pyth-action@main
+        with:
+          command: get-prices
+          symbols: BTC,ETH,XAU,AAPL
+
+      # ── 2. On-chain price commit (Pyth Pull Oracle) ──────────────
+      # Forward the binary blob from step 1 to Pyth's Avalanche
+      # contract via updatePriceFeeds(bytes[]). Encoding + signing
+      # are handled inside the action via the W3 bridge — no private
+      # key enters this container. After this lands, any Avalanche
+      # contract can call Pyth.getPriceNoOlderThan(feedId, maxAge)
+      # and observe the same price the off-chain worker saw — and
+      # revert if reality drifted.
+      - name: Commit observation on-chain (Pyth Pull Oracle)
+        id: pyth_commit
+        uses: w3-io/w3-pyth-action@main
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.PYTH_COOKBOOK_SIGNING_KEY }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: submit-on-chain
+          network: avalanche
+          # The binary blob arrives as a JSON array of hex strings —
+          # exactly the bytes[] shape updatePriceFeeds expects.
+          update-data: ${{ toJSON(fromJSON(steps.prices.outputs.result).binary.data) }}
+          rpc-url: ${{ secrets.AVALANCHE_RPC_URL }}

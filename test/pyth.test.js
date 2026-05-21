@@ -175,6 +175,11 @@ describe('PythClient: getLatestPrices', () => {
     assert.ok(Math.abs(result.prices[0].price.confidence - 12) < 1)
     assert.ok(result.prices[0].emaPrice)
     assert.equal(result.prices[0].metadata.slot, 12345678)
+    // binary is the priceUpdateData blob that downstream on-chain
+    // steps submit to Pyth.updatePriceFeeds — must be preserved
+    // through formatPriceUpdate so the off-chain decision and the
+    // on-chain commit can share the same observation.
+    assert.deepEqual(result.binary, { encoding: 'hex', data: ['deadbeef'] })
   })
 
   it('requires at least one ID', async () => {
