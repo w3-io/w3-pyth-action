@@ -6,14 +6,19 @@
  * read off-chain (cheap), commit on-chain (trusted), with both sides
  * referring to the same price observation.
  *
- * Uses the W3 bridge in @w3-io/action-core for ABI encoding and
- * signing — the action itself never holds a private key. The signing
- * key sits behind the bridge, addressed via the `W3_SECRET_*` env
- * exposed to the action.
+ * Uses viem to sign + broadcast directly. The W3 bridge's call-contract
+ * primitive currently chokes on bytes[] args (parser error in
+ * alloy-dyn-abi), so we sidestep it for this command. The signing key
+ * still flows through namespace secrets → action env (never the YAML),
+ * is loaded into memory only for the duration of this step, and is
+ * not logged.
  */
 
 import * as core from '@actions/core'
-import { ethereum, W3ActionError } from '@w3-io/action-core'
+import { W3ActionError } from '@w3-io/action-core'
+import { createWalletClient, createPublicClient, http, parseAbi } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { avalanche, mainnet, base, arbitrum, optimism, polygon } from 'viem/chains'
 
 /**
  * Pyth Pull Oracle contract addresses per chain.
@@ -22,13 +27,24 @@ import { ethereum, W3ActionError } from '@w3-io/action-core'
  * Re-verify if a new chain is added.
  */
 export const PYTH_CONTRACTS = Object.freeze({
-  avalanche: '0x4305FB66699C3B2702D4d05CF36551390A4c69C6', // C-Chain mainnet
+  avalanche: '0x4305FB66699C3B2702D4d05CF36551390A4c69C6',
   ethereum: '0x4305FB66699C3B2702D4d05CF36551390A4c69C6',
   base: '0x8250f4aF4B972684F7b336503E2D6dFeDeB1487a',
   arbitrum: '0xff1a0f4744e8582DF1aE09D5611b887B6a12925C',
   optimism: '0xff1a0f4744e8582DF1aE09D5611b887B6a12925C',
   polygon: '0xff1a0f4744e8582DF1aE09D5611b887B6a12925C',
 })
+
+const VIEM_CHAINS = Object.freeze({
+  avalanche,
+  ethereum: mainnet,
+  base,
+  arbitrum,
+  optimism,
+  polygon,
+})
+
+const PYTH_ABI = parseAbi(['function updatePriceFeeds(bytes[] updateData) payable'])
 
 /**
  * Submit a priceUpdateData blob to Pyth's on-chain contract.
@@ -41,17 +57,16 @@ export const PYTH_CONTRACTS = Object.freeze({
  * @param {string} [opts.rpcUrl] — Optional custom RPC URL.
  * @param {string} [opts.value] — Optional `msg.value` in wei. Pyth
  *   requires `msg.value >= getUpdateFee(updateData)`. Defaults to
- *   "10000" — comfortable margin for ~10 feeds on Avalanche, and
- *   excess is kept by the contract, so don't overpay heavily.
- * @returns {Promise<{ txHash: string, blockNumber: number|null,
- *   chain: string, contract: string, feedCount: number }>}
+ *   "10000" — comfortable margin for ~10 feeds on Avalanche.
+ * @returns {Promise<{ txHash, blockNumber, chain, contract, feedCount, gasUsed }>}
  */
 export async function submitOnChain({ network, updateData, rpcUrl, value = '10000' }) {
   if (!network) {
     throw new W3ActionError('MISSING_NETWORK', 'network is required')
   }
   const contract = PYTH_CONTRACTS[network]
-  if (!contract) {
+  const chain = VIEM_CHAINS[network]
+  if (!contract || !chain) {
     throw new W3ActionError('UNKNOWN_NETWORK', `Pyth not configured for: ${network}`)
   }
   if (!Array.isArray(updateData) || updateData.length === 0) {
@@ -61,47 +76,47 @@ export async function submitOnChain({ network, updateData, rpcUrl, value = '1000
     )
   }
 
-  // Normalize entries to 0x-prefixed hex. Hermes returns bare hex
-  // (no prefix) on parsed responses; ABI encoders want 0x.
+  // The bridge convention: signers come from W3_SECRET_* env vars
+  // provisioned by the runner from namespace secrets.
+  const rawKey = process.env.W3_SECRET_ETHEREUM
+  if (!rawKey) {
+    throw new W3ActionError(
+      'SIGNER_REQUIRED',
+      'W3_SECRET_ETHEREUM env var not set — workflow must wire `env: W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}` on this step',
+    )
+  }
+  const pkHex = rawKey.startsWith('0x') ? rawKey : '0x' + rawKey
+  const account = privateKeyToAccount(pkHex)
+
+  // Normalize entries to 0x-prefixed hex.
   const normalized = updateData.map((d) =>
     typeof d === 'string' && d.startsWith('0x') ? d : '0x' + d,
   )
 
-  // Pyth.updatePriceFeeds(bytes[] updateData) payable.
-  // Pass the full ABI JSON alongside the method name. The bridge's
-  // alloy-dyn-abi parser rejects bytes[] when given only the bare
-  // signature; supplying the explicit ABI sidesteps the inference.
-  // (Same pattern morpho uses for tuple-typed inputs.)
-  const PYTH_UPDATE_ABI = JSON.stringify([
-    {
-      name: 'updatePriceFeeds',
-      type: 'function',
-      stateMutability: 'payable',
-      inputs: [{ name: 'updateData', type: 'bytes[]' }],
-      outputs: [],
-    },
-  ])
-  const result = await ethereum.callContract(
-    {
-      contract,
-      method: 'updatePriceFeeds',
-      abi: PYTH_UPDATE_ABI,
-      args: [normalized],
-      value,
-      ...(rpcUrl ? { rpcUrl } : {}),
-    },
-    network,
-  )
+  const transport = http(rpcUrl || undefined)
+  const wallet = createWalletClient({ account, chain, transport })
+  const publicClient = createPublicClient({ chain, transport })
 
-  // Diagnostic — keep until txHash / blockNumber consistently surface.
-  // Logs land in the step's logs section in the explorer.
-  core.info(`bridge result keys: ${Object.keys(result || {}).join(', ')}`)
-  core.info(`bridge result raw: ${JSON.stringify(result)}`)
+  core.info(`submitOnChain: chain=${network} contract=${contract} feeds=${normalized.length} value=${value} from=${account.address}`)
+
+  const hash = await wallet.writeContract({
+    address: contract,
+    abi: PYTH_ABI,
+    functionName: 'updatePriceFeeds',
+    args: [normalized],
+    value: BigInt(value),
+  })
+
+  const receipt = await publicClient.waitForTransactionReceipt({ hash })
 
   return {
-    ...result,
+    txHash: hash,
+    blockNumber: Number(receipt.blockNumber),
+    gasUsed: String(receipt.gasUsed),
     chain: network,
     contract,
     feedCount: normalized.length,
+    from: account.address,
+    status: receipt.status,
   }
 }
