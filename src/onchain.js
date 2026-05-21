@@ -6,13 +6,13 @@
  * read off-chain (cheap), commit on-chain (trusted), with both sides
  * referring to the same price observation.
  *
- * Uses the W3 bridge SDK for ABI encoding and signing — the action
- * itself never holds a private key. The signing key sits behind the
- * bridge, addressed via the `W3_SECRET_*` env exposed to the action.
+ * Uses the W3 bridge in @w3-io/action-core for ABI encoding and
+ * signing — the action itself never holds a private key. The signing
+ * key sits behind the bridge, addressed via the `W3_SECRET_*` env
+ * exposed to the action.
  */
 
-import { w3 } from './bridge.js'
-import { W3ActionError } from '@w3-io/action-core'
+import { ethereum, W3ActionError } from '@w3-io/action-core'
 
 /**
  * Pyth Pull Oracle contract addresses per chain.
@@ -61,20 +61,22 @@ export async function submitOnChain({ network, updateData, rpcUrl, value = '1000
   }
 
   // Normalize entries to 0x-prefixed hex. Hermes returns bare hex
-  // (no prefix) on parsed responses; viem/ABI encoders want 0x.
+  // (no prefix) on parsed responses; ABI encoders want 0x.
   const normalized = updateData.map((d) =>
     typeof d === 'string' && d.startsWith('0x') ? d : '0x' + d,
   )
 
   // Pyth.updatePriceFeeds(bytes[] updateData) payable
-  const result = await w3.ethereum.callContract({
+  const result = await ethereum.callContract(
+    {
+      contract,
+      method: 'function updatePriceFeeds(bytes[])',
+      args: [normalized],
+      value,
+      ...(rpcUrl ? { rpcUrl } : {}),
+    },
     network,
-    contract,
-    method: 'updatePriceFeeds(bytes[])',
-    args: [normalized],
-    value,
-    ...(rpcUrl ? { rpcUrl } : {}),
-  })
+  )
 
   return {
     txHash: result.txHash || result.transactionHash,
