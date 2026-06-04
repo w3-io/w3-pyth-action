@@ -50,37 +50,80 @@ const PYTH_ABI = parseAbi([
 ])
 
 /**
- * Submit a priceUpdateData blob to Pyth's on-chain contract.
+ * Read Pyth.getUpdateFee for a given price-update blob.
+ *
+ * Returns the required `msg.value` in wei for `updatePriceFeeds(blob)`
+ * to succeed on the given chain. The workflow uses this to compute
+ * the `value` it passes to `submit-on-chain` — no decisions live in
+ * the action.
  *
  * @param {object} opts
  * @param {string} opts.network — Chain key (avalanche, ethereum, base, ...)
- * @param {string[]} opts.updateData — Array of hex strings from the
- *   Hermes `binary.data` field. Each entry is one or more VAA-signed
- *   price updates.
+ * @param {string[]} opts.updateData — Hex-string array from Hermes `binary.data`.
  * @param {string} [opts.rpcUrl] — Optional custom RPC URL.
- * @param {string} [opts.value] — Optional `msg.value` in wei. Pyth
- *   requires `msg.value >= getUpdateFee(updateData)`. Defaults to
- *   "10000" — comfortable margin for ~10 feeds on Avalanche.
- * @returns {Promise<{ txHash, blockNumber, chain, contract, feedCount, gasUsed }>}
+ * @returns {Promise<{ wei: string, chain: string, contract: string, feedCount: number }>}
+ *   `wei` is a decimal-stringified `BigInt` so it round-trips losslessly
+ *   through JSON and into the workflow's `to_bigint(...)` coercion.
  */
-export async function submitOnChain({ network, updateData, rpcUrl, value = '10000' }) {
-  if (!network) {
-    throw new W3ActionError('MISSING_NETWORK', 'network is required')
+export async function getUpdateFee({ network, updateData, rpcUrl }) {
+  const { contract, normalized, publicClient } = prepareCall({
+    network,
+    updateData,
+    rpcUrl,
+  })
+
+  const fee = await publicClient.readContract({
+    address: contract,
+    abi: PYTH_ABI,
+    functionName: 'getUpdateFee',
+    args: [normalized],
+  })
+
+  core.info(`getUpdateFee: chain=${network} feeds=${normalized.length} fee=${fee} wei`)
+
+  return {
+    wei: fee.toString(),
+    chain: network,
+    contract,
+    feedCount: normalized.length,
   }
-  const contract = PYTH_CONTRACTS[network]
-  const chain = VIEM_CHAINS[network]
-  if (!contract || !chain) {
-    throw new W3ActionError('UNKNOWN_NETWORK', `Pyth not configured for: ${network}`)
-  }
-  if (!Array.isArray(updateData) || updateData.length === 0) {
+}
+
+/**
+ * Submit a priceUpdateData blob to Pyth's on-chain contract.
+ *
+ * The caller (workflow) supplies `value` in wei. The action used to
+ * read `getUpdateFee` internally and max it against a default, but
+ * that policy decision belongs in the workflow: it's where slippage
+ * tolerances, fee ceilings, and circuit breakers live. Authors who
+ * need the on-chain fee can compute it with the `get-update-fee`
+ * command and pass it through `value: ${{ to_bigint(...) }}`.
+ *
+ * @param {object} opts
+ * @param {string} opts.network — Chain key (avalanche, ethereum, base, ...)
+ * @param {string[]} opts.updateData — Hex-string array from Hermes `binary.data`.
+ * @param {string} opts.value — `msg.value` in wei. Required; the action
+ *   no longer guesses or defaults this. Must be a decimal or `0x`-hex
+ *   integer string parsable as `BigInt`.
+ * @param {string} [opts.rpcUrl] — Optional custom RPC URL.
+ * @returns {Promise<{ txHash, blockNumber, chain, contract, feedCount, gasUsed, from, status, value }>}
+ */
+export async function submitOnChain({ network, updateData, value, rpcUrl }) {
+  if (value === undefined || value === null || value === '') {
     throw new W3ActionError(
-      'MISSING_UPDATE_DATA',
-      'update-data must be a non-empty array of hex strings from Hermes binary.data',
+      'MISSING_VALUE',
+      'value is required (in wei). Compute it with the `get-update-fee` command and pass via `value: ${{ to_bigint(steps.fee.outputs.wei) }}`.',
     )
   }
+  const txValue = parseWei(value)
+  const { contract, chain, normalized, publicClient } = prepareCall({
+    network,
+    updateData,
+    rpcUrl,
+  })
 
-  // The bridge convention: signers come from W3_SECRET_* env vars
-  // provisioned by the runner from namespace secrets.
+  // Signer comes from a bridge-provisioned env var. The action holds
+  // no policy — it parses, signs, and submits.
   const rawKey = process.env.W3_SECRET_ETHEREUM
   if (!rawKey) {
     throw new W3ActionError(
@@ -91,37 +134,11 @@ export async function submitOnChain({ network, updateData, rpcUrl, value = '1000
   const pkHex = rawKey.startsWith('0x') ? rawKey : '0x' + rawKey
   const account = privateKeyToAccount(pkHex)
 
-  // Normalize entries to 0x-prefixed hex.
-  const normalized = updateData.map((d) =>
-    typeof d === 'string' && d.startsWith('0x') ? d : '0x' + d,
-  )
-
   const transport = http(rpcUrl || undefined)
   const wallet = createWalletClient({ account, chain, transport })
-  const publicClient = createPublicClient({ chain, transport })
-
-  // Ask Pyth what it'll actually charge for this exact blob, then
-  // submit with that value (caps unnecessary overpayment + avoids
-  // InsufficientFee reverts when 10000 wei isn't enough). Hardcoded
-  // ceilings exist for safety against contract bugs returning huge
-  // numbers — 1 AVAX is absurdly more than any real Pyth fee.
-  const requiredFee = await publicClient.readContract({
-    address: contract,
-    abi: PYTH_ABI,
-    functionName: 'getUpdateFee',
-    args: [normalized],
-  })
-  const userValue = BigInt(value)
-  const txValue = requiredFee > userValue ? requiredFee : userValue
-  if (txValue > BigInt('1000000000000000000')) {
-    throw new W3ActionError(
-      'EXCESSIVE_FEE',
-      `Pyth.getUpdateFee returned ${txValue} wei (>1 AVAX) — refusing to submit`,
-    )
-  }
 
   core.info(
-    `submitOnChain: chain=${network} feeds=${normalized.length} fee=${requiredFee} sending=${txValue} from=${account.address}`,
+    `submitOnChain: chain=${network} feeds=${normalized.length} value=${txValue} from=${account.address}`,
   )
 
   const hash = await wallet.writeContract({
@@ -143,5 +160,60 @@ export async function submitOnChain({ network, updateData, rpcUrl, value = '1000
     feedCount: normalized.length,
     from: account.address,
     status: receipt.status,
+    value: txValue.toString(),
   }
+}
+
+/**
+ * Shared validation + viem client setup for the two on-chain commands.
+ *
+ * Throws domain-specific `W3ActionError`s for missing network, unknown
+ * chain key, or malformed update-data so the caller's error surface
+ * stays consistent.
+ */
+function prepareCall({ network, updateData, rpcUrl }) {
+  if (!network) {
+    throw new W3ActionError('MISSING_NETWORK', 'network is required')
+  }
+  const contract = PYTH_CONTRACTS[network]
+  const chain = VIEM_CHAINS[network]
+  if (!contract || !chain) {
+    throw new W3ActionError('UNKNOWN_NETWORK', `Pyth not configured for: ${network}`)
+  }
+  if (!Array.isArray(updateData) || updateData.length === 0) {
+    throw new W3ActionError(
+      'MISSING_UPDATE_DATA',
+      'update-data must be a non-empty array of hex strings from Hermes binary.data',
+    )
+  }
+  const normalized = updateData.map((d) =>
+    typeof d === 'string' && d.startsWith('0x') ? d : '0x' + d,
+  )
+  const transport = http(rpcUrl || undefined)
+  const publicClient = createPublicClient({ chain, transport })
+  return { contract, chain, normalized, publicClient }
+}
+
+/**
+ * Parse a wei value from string into a `BigInt`. Accepts decimal or
+ * `0x`-prefixed hex. Rejects negatives and empty strings.
+ */
+function parseWei(value) {
+  const trimmed = String(value).trim()
+  if (!trimmed) {
+    throw new W3ActionError('INVALID_VALUE', 'value must not be empty')
+  }
+  let parsed
+  try {
+    parsed = BigInt(trimmed)
+  } catch {
+    throw new W3ActionError(
+      'INVALID_VALUE',
+      `value must be a decimal or 0x-hex integer (got: ${trimmed})`,
+    )
+  }
+  if (parsed < 0n) {
+    throw new W3ActionError('INVALID_VALUE', `value must be non-negative (got: ${parsed})`)
+  }
+  return parsed
 }

@@ -1,7 +1,7 @@
 import { createCommandRouter, setJsonOutput, handleError, W3ActionError } from '@w3-io/action-core'
 import * as core from '@actions/core'
 import { PythClient } from './pyth.js'
-import { submitOnChain } from './onchain.js'
+import { getUpdateFee, submitOnChain } from './onchain.js'
 
 const router = createCommandRouter({
   'get-feeds': async () => {
@@ -30,40 +30,34 @@ const router = createCommandRouter({
     writeSummary('get-prices', result)
   },
 
+  'get-update-fee': async () => {
+    const network = core.getInput('network')
+    const updateData = parseUpdateDataInput(core.getInput('update-data'))
+    const rpcUrl = core.getInput('rpc-url') || undefined
+
+    const result = await getUpdateFee({ network, updateData, rpcUrl })
+    setJsonOutput('result', result)
+    core.summary
+      .addHeading('Pyth update fee', 3)
+      .addRaw(`On **${result.chain}**, **${result.feedCount}** feed(s) cost **${result.wei}** wei.\n`)
+      .write()
+  },
+
   'submit-on-chain': async () => {
     const network = core.getInput('network')
-    if (!network) {
-      throw new W3ActionError('MISSING_NETWORK', 'network is required for submit-on-chain')
-    }
-    // update-data can come in two shapes:
-    //   1. From the prior get-prices step: a JSON array string like
-    //      '["abc...", "def..."]' resolved via fromJSON()
-    //   2. Manual: a single hex string (rare; mostly for testing)
-    const updateDataInput = core.getInput('update-data')
-    if (!updateDataInput) {
-      throw new W3ActionError(
-        'MISSING_UPDATE_DATA',
-        'update-data is required (pass the binary.data array from a prior get-prices step)',
-      )
-    }
-    let updateData
-    try {
-      updateData = JSON.parse(updateDataInput)
-    } catch {
-      // Not JSON — treat as a single hex string.
-      updateData = [updateDataInput]
-    }
-    if (!Array.isArray(updateData)) updateData = [updateData]
-
+    const updateData = parseUpdateDataInput(core.getInput('update-data'))
     const rpcUrl = core.getInput('rpc-url') || undefined
-    const value = core.getInput('value') || undefined
+    // `value` is now required — fee policy lives in the workflow.
+    // Pair this step with `get-update-fee` and pass:
+    //   value: ${{ to_bigint(steps.fee.outputs.wei) }}
+    const value = core.getInput('value')
 
     const result = await submitOnChain({ network, updateData, rpcUrl, value })
     setJsonOutput('result', result)
     core.summary
       .addHeading('Pyth on-chain commit', 3)
       .addRaw(`Submitted **${result.feedCount}** price update(s) to Pyth on **${result.chain}**\n`)
-      .addRaw(`Tx: \`${result.txHash}\`\n`)
+      .addRaw(`Tx: \`${result.txHash}\` · value: \`${result.value}\` wei\n`)
       .write()
   },
 
@@ -97,6 +91,34 @@ function createClient() {
   return new PythClient({
     baseUrl: core.getInput('api-url') || undefined,
   })
+}
+
+/**
+ * Normalize the `update-data` input into a hex-string array.
+ *
+ * The workflow passes either:
+ *   1. A JSON array string from a prior `get-prices` step, surfaced
+ *      via `toJSON(fromJSON(...).binary.data)`.
+ *   2. A single hex string (rare; mostly for testing one feed).
+ *
+ * Either way, `getUpdateFee` and `submitOnChain` expect an array,
+ * so we coerce here and reject empties uniformly.
+ */
+function parseUpdateDataInput(raw) {
+  if (!raw) {
+    throw new W3ActionError(
+      'MISSING_UPDATE_DATA',
+      'update-data is required (pass the binary.data array from a prior get-prices step)',
+    )
+  }
+  let parsed
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    parsed = [raw]
+  }
+  if (!Array.isArray(parsed)) parsed = [parsed]
+  return parsed
 }
 
 /**

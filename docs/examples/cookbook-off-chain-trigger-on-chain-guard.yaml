@@ -17,7 +17,21 @@
 # contract reads the same price your worker saw, refuses to execute
 # if it drifted.
 #
-# This recipe demos the wiring. A production rebalancer would chain
+# # Where the math lives
+#
+# Earlier versions of this recipe let the `w3-pyth-action` itself
+# read `Pyth.getUpdateFee(...)` and decide how much wei to send.
+# That conflates the action (a Pyth-shape primitive) with the
+# workflow's economic policy (how much to spend, what ceilings to
+# enforce, what to do on overrun). After the BigInt + `let:`
+# milestone, both pieces live where they belong:
+#
+#   - The action exposes `get-update-fee` (reads the wei amount) and
+#     `submit-on-chain` (requires `value` from the caller).
+#   - The workflow's `let:` block computes the value and enforces the
+#     ceiling using native BigInt arithmetic — no `node -e` shell-out.
+#
+# A production rebalancer would chain
 #     updatePriceFeeds(...) -> getPriceNoOlderThan(...) -> band check -> swap
 # inside a single atomic transaction. We stop at the update call so
 # the recipe stays vendor-neutral about the swap layer.
@@ -31,6 +45,14 @@ jobs:
   cross-asset-guard:
     name: Multi-asset snapshot with on-chain price commit
     runs-on: w3
+    # Job-level let: holds the policy knobs the steps below reference.
+    # Putting them at the top keeps every economic decision in one
+    # readable block instead of buried in inline expressions.
+    let:
+      # Maximum fee we're willing to pay for an updatePriceFeeds call.
+      # 0.1 AVAX = 10^17 wei — generous, but not gas-bomb generous.
+      fee_ceiling_wei: 100_000_000_000_000_000
+
     steps:
       # ── 1. Off-chain price read (Hermes API) ─────────────────────
       # Read four asset prices in a single call. Pyth covers crypto,
@@ -45,16 +67,35 @@ jobs:
           command: get-prices
           symbols: BTC,ETH,XAU,AAPL
 
-      # ── 2. On-chain price commit (Pyth Pull Oracle) ──────────────
+      # ── 2. On-chain fee read ─────────────────────────────────────
+      # Ask Pyth's Avalanche contract what `updatePriceFeeds(blob)`
+      # will cost in wei. The result is a stringified BigInt so it
+      # round-trips through JSON losslessly into the workflow's
+      # `to_bigint(...)` coercion below.
+      - name: Read Pyth.getUpdateFee
+        id: fee
+        uses: w3-io/w3-pyth-action@main
+        with:
+          command: get-update-fee
+          network: avalanche
+          update-data: ${{ toJSON(fromJSON(steps.prices.outputs.result).binary.data) }}
+          rpc-url: ${{ secrets.AVALANCHE_RPC_URL }}
+
+      # ── 3. On-chain price commit (Pyth Pull Oracle) ──────────────
       # Forward the binary blob from step 1 to Pyth's Avalanche
-      # contract via updatePriceFeeds(bytes[]). Encoding + signing
-      # are handled inside the action via the W3 bridge — no private
-      # key enters this container. After this lands, any Avalanche
-      # contract can call Pyth.getPriceNoOlderThan(feedId, maxAge)
-      # and observe the same price the off-chain worker saw — and
-      # revert if reality drifted.
+      # contract via updatePriceFeeds(bytes[]). The step-level
+      # `let:` block computes `tx_value` as the fee read in step 2
+      # (coerced to BigInt) and only runs the commit if the fee is
+      # under the job-level ceiling — workflow-side policy, not
+      # action-side magic.
+      #
+      # Encoding + signing happen inside the action via the W3
+      # bridge — no private key enters this container.
       - name: Commit observation on-chain (Pyth Pull Oracle)
         id: pyth_commit
+        if: ${{ to_bigint(steps.fee.outputs.wei) <= fee_ceiling_wei }}
+        let:
+          tx_value: to_bigint(steps.fee.outputs.wei)
         uses: w3-io/w3-pyth-action@main
         env:
           W3_SECRET_ETHEREUM: ${{ secrets.PYTH_COOKBOOK_SIGNING_KEY }}
@@ -63,7 +104,6 @@ jobs:
         with:
           command: submit-on-chain
           network: avalanche
-          # The binary blob arrives as a JSON array of hex strings —
-          # exactly the bytes[] shape updatePriceFeeds expects.
           update-data: ${{ toJSON(fromJSON(steps.prices.outputs.result).binary.data) }}
+          value: ${{ tx_value }}
           rpc-url: ${{ secrets.AVALANCHE_RPC_URL }}
