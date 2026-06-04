@@ -41828,7 +41828,9 @@ const router = (0,_w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .createComma
     ;(0,_w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .setJsonOutput */ .mI)('result', result)
     _actions_core__WEBPACK_IMPORTED_MODULE_1__.summary
       .addHeading('Pyth update fee', 3)
-      .addRaw(`On **${result.chain}**, **${result.feedCount}** feed(s) cost **${result.wei}** wei.\n`)
+      .addRaw(
+        `On **${result.chain}**, **${result.feedCount}** feed(s) cost **${result.wei}** wei.\n`,
+      )
       .write()
   },
 
