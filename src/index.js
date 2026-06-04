@@ -39,7 +39,9 @@ const router = createCommandRouter({
     setJsonOutput('result', result)
     core.summary
       .addHeading('Pyth update fee', 3)
-      .addRaw(`On **${result.chain}**, **${result.feedCount}** feed(s) cost **${result.wei}** wei.\n`)
+      .addRaw(
+        `On **${result.chain}**, **${result.feedCount}** feed(s) cost **${result.wei}** wei.\n`,
+      )
       .write()
   },
 
