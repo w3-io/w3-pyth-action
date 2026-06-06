@@ -58827,15 +58827,22 @@ class PythClient {
   /**
    * Format raw price update response into a cleaner structure.
    *
-   * Returns both the human-readable `parsed` data (as `prices[]`) AND
-   * Hermes' `binary` blob — the latter is the priceUpdateData payload
-   * a consumer submits to Pyth's on-chain contract via
-   * `updatePriceFeeds(bytes[])`, which lets a downstream EVM step
-   * verify the same observation that triggered the off-chain decision.
+   * Returns three views of the Hermes response:
+   * - `prices[]` — human-readable decoded prices for off-chain decisions
+   * - `binary` — Hermes' raw blob (preserved for downstream tools that
+   *   want the original encoding metadata)
+   * - `priceUpdate` — a normalized `0x`-prefixed hex array ready to
+   *   pass as `bytes[]` to a Pyth contract method (e.g. the contract's
+   *   own `updatePriceFeeds`, or a gated swap contract that wraps it).
+   *   Always emitted in this canonical shape regardless of whether
+   *   Hermes returned `encoding: "hex"` or `encoding: "base64"`, so
+   *   a workflow author can splice it straight into a contract call
+   *   without an intermediate node step.
    */
   formatPriceUpdate(data) {
     const binary = data.binary ?? null
-    if (!data.parsed) return { prices: [], binary }
+    const priceUpdate = binary ? normalizeBinaryToHex(binary) : []
+    if (!data.parsed) return { prices: [], binary, priceUpdate }
 
     return {
       prices: data.parsed.map((entry) => ({
@@ -58849,6 +58856,7 @@ class PythClient {
         },
       })),
       binary,
+      priceUpdate,
     }
   }
 
@@ -58884,6 +58892,31 @@ class PythClient {
       throw err
     }
   }
+}
+
+/**
+ * Convert Hermes' `binary` blob into the `0x`-prefixed hex array shape
+ * EVM `bytes[]` parsers accept.
+ *
+ * Hermes returns one of two encodings per the API's `encoding` query
+ * param: `hex` (default — strings without `0x`) or `base64`. Workflows
+ * shouldn't have to know which: this helper canonicalises both into
+ * the contract-call-ready form so the workflow can pass `priceUpdate`
+ * straight through `${{ ... }}` without an intermediate node step.
+ *
+ * The original `binary` object is preserved on the action output for
+ * any consumer that needs the source encoding.
+ */
+function normalizeBinaryToHex(binary) {
+  if (!binary || !Array.isArray(binary.data)) return []
+  const encoding = binary.encoding ?? 'hex'
+  return binary.data.map((entry) => {
+    if (typeof entry !== 'string') return entry
+    if (encoding === 'base64') {
+      return '0x' + Buffer.from(entry, 'base64').toString('hex')
+    }
+    return entry.startsWith('0x') ? entry : '0x' + entry
+  })
 }
 
 
