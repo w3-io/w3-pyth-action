@@ -180,6 +180,50 @@ describe('PythClient: getLatestPrices', () => {
     // through formatPriceUpdate so the off-chain decision and the
     // on-chain commit can share the same observation.
     assert.deepEqual(result.binary, { encoding: 'hex', data: ['deadbeef'] })
+    // priceUpdate is the same blob, normalised to the 0x-prefixed
+    // hex array shape EVM `bytes[]` parsers accept. Workflows can
+    // splice this straight into a contract call without an
+    // intermediate node step.
+    assert.deepEqual(result.priceUpdate, ['0xdeadbeef'])
+  })
+
+  it('priceUpdate preserves 0x-prefix when Hermes already prefixes', async () => {
+    mockFetch([
+      {
+        body: {
+          ...PRICES_RESPONSE,
+          binary: { encoding: 'hex', data: ['0xdeadbeef', '0xfeedface'] },
+        },
+      },
+    ])
+    const client = new PythClient()
+    const result = await client.getLatestPrices(['aaa'])
+    assert.deepEqual(result.priceUpdate, ['0xdeadbeef', '0xfeedface'])
+  })
+
+  it('priceUpdate decodes base64 encoding into 0x-hex', async () => {
+    // Hermes returns base64 when `?encoding=base64` is requested.
+    // Workflows pass through whatever the server defaults to, so the
+    // action must handle both shapes identically on the output side.
+    // "3q2+7w==" is base64 for the four bytes [0xde, 0xad, 0xbe, 0xef].
+    mockFetch([
+      {
+        body: {
+          ...PRICES_RESPONSE,
+          binary: { encoding: 'base64', data: ['3q2+7w=='] },
+        },
+      },
+    ])
+    const client = new PythClient()
+    const result = await client.getLatestPrices(['aaa'])
+    assert.deepEqual(result.priceUpdate, ['0xdeadbeef'])
+  })
+
+  it('priceUpdate is an empty array when binary is missing', async () => {
+    mockFetch([{ body: { ...PRICES_RESPONSE, binary: null } }])
+    const client = new PythClient()
+    const result = await client.getLatestPrices(['aaa'])
+    assert.deepEqual(result.priceUpdate, [])
   })
 
   it('requires at least one ID', async () => {
