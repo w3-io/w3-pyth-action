@@ -125,9 +125,7 @@ display:
     name: 'Pyth'
     short_name: 'Pyth'
     description: 'Price feeds for crypto, equities, FX, metals, and more'
-    # Pinned to the same ref as PR #6 so the logo is available before
-    # this PR merges to main. Flip to `/main/` after merge.
-    logo: 'https://raw.githubusercontent.com/w3-io/w3-pyth-action/audie/expose-binary-blob/assets/logo.png'
+    logo: 'https://raw.githubusercontent.com/w3-io/w3-pyth-action/main/assets/logo.png'
     # Pyth's signature lavender. Tints the per-command icon when the
     # brand logo isn't loaded (PNG fetch failure or pre-load).
     color: '#E6DAFE'
@@ -161,6 +159,16 @@ display:
         - { label: 'Symbols', value: '{{ inputs.symbols }}' }
         - { label: 'Publish time', value: '{{ inputs.publish-time }}' }
         - { label: 'Feeds returned', value: '{{ outputs.result.prices | length }}' }
+
+    get-update-fee:
+      icon: 'info'
+      title_template: 'Pyth update fee · {{ inputs.network | chain_pretty }}'
+      subtitle_template: 'on-chain Pull Oracle quote'
+      summary:
+        - { label: 'Network', value: '{{ inputs.network | chain_pretty }}' }
+        - { label: 'Feeds priced', value: '{{ outputs.result.feedCount }}' }
+        - { label: 'Fee (wei)', value: '{{ outputs.result.wei }}' }
+      chain_path: 'inputs.network'
 
     submit-on-chain:
       icon: 'lock'
