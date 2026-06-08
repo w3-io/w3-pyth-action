@@ -125,12 +125,10 @@ display:
     name: 'Pyth'
     short_name: 'Pyth'
     description: 'Price feeds for crypto, equities, FX, metals, and more'
-    # Pinned to the same ref as PR #6 so the logo is available before
-    # this PR merges to main. Flip to `/main/` after merge.
-    logo: 'https://raw.githubusercontent.com/w3-io/w3-pyth-action/audie/expose-binary-blob/assets/logo.png'
+    logo: 'https://raw.githubusercontent.com/w3-io/w3-pyth-action/main/assets/pyth.svg'
     # Pyth's signature lavender. Tints the per-command icon when the
     # brand logo isn't loaded (PNG fetch failure or pre-load).
-    color: '#E6DAFE'
+    color: '#5F22A8'
   commands:
     get-prices:
       icon: 'pyth'
