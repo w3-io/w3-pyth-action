@@ -41834,6 +41834,21 @@ const router = (0,_w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .createComma
       .write()
   },
 
+  'read-price-onchain': async () => {
+    const network = _actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput('network') || 'avalanche'
+    const id = parseList(_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput('ids'))[0]
+    const rpcUrl = _actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput('rpc-url') || undefined
+
+    const result = await (0,_onchain_js__WEBPACK_IMPORTED_MODULE_3__/* .readPriceOnChain */ .Av)({ network, id, rpcUrl })
+    ;(0,_w3_io_action_core__WEBPACK_IMPORTED_MODULE_0__/* .setJsonOutput */ .mI)('result', result)
+    _actions_core__WEBPACK_IMPORTED_MODULE_1__.summary
+      .addHeading('Pyth on-chain price', 3)
+      .addRaw(
+        `\`${result.id}\` on **${result.chain}**: price \`${result.price}\` (expo ${result.expo}) ~ **${result.value}**\n`,
+      )
+      .write()
+  },
+
   'submit-on-chain': async () => {
     const network = _actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput('network')
     const updateData = parseUpdateDataInput(_actions_core__WEBPACK_IMPORTED_MODULE_1__.getInput('update-data'))
@@ -42002,6 +42017,7 @@ __webpack_async_result__();
 // EXPORTS
 __nccwpck_require__.d(__webpack_exports__, {
   yZ: () => (/* binding */ getUpdateFee),
+  Av: () => (/* binding */ readPriceOnChain),
   TD: () => (/* binding */ submitOnChain)
 });
 
@@ -42013,198 +42029,274 @@ var core = __nccwpck_require__(7484);
 var dist = __nccwpck_require__(4653);
 // EXTERNAL MODULE: ./node_modules/abitype/dist/esm/human-readable/parseAbi.js
 var parseAbi = __nccwpck_require__(7218);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/request.js
-var errors_request = __nccwpck_require__(1168);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/accounts/utils/parseAccount.js
+var parseAccount = __nccwpck_require__(304);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/uid.js
+const size = 256;
+let index = size;
+let buffer;
+function uid_uid(length = 11) {
+    if (!buffer || index + length > size * 2) {
+        buffer = '';
+        index = 0;
+        for (let i = 0; i < size; i++) {
+            buffer += ((256 + Math.random() * 256) | 0).toString(16).substring(1);
+        }
+    }
+    return buffer.substring(index, index++ + length);
+}
+//# sourceMappingURL=uid.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/clients/createClient.js
+
+
+function createClient(parameters) {
+    const { batch, chain, ccipRead, dataSuffix, key = 'base', name = 'Base Client', type = 'base', } = parameters;
+    const experimental_blockTag = parameters.experimental_blockTag ??
+        (typeof chain?.experimental_preconfirmationTime === 'number'
+            ? 'pending'
+            : undefined);
+    const blockTime = chain?.blockTime ?? 12_000;
+    const defaultPollingInterval = Math.min(Math.max(Math.floor(blockTime / 2), 500), 4_000);
+    const pollingInterval = parameters.pollingInterval ?? defaultPollingInterval;
+    const cacheTime = parameters.cacheTime ?? pollingInterval;
+    const account = parameters.account
+        ? (0,parseAccount/* parseAccount */.J)(parameters.account)
+        : undefined;
+    const { config, request, value } = parameters.transport({
+        account,
+        chain,
+        pollingInterval,
+    });
+    const transport = { ...config, ...value };
+    const client = {
+        account,
+        batch,
+        cacheTime,
+        ccipRead,
+        chain,
+        dataSuffix,
+        key,
+        name,
+        pollingInterval,
+        request,
+        transport,
+        type,
+        uid: uid_uid(),
+        ...(experimental_blockTag ? { experimental_blockTag } : {}),
+    };
+    function extend(base) {
+        return (extendFn) => {
+            const extended = extendFn(base);
+            for (const key in client)
+                delete extended[key];
+            const combined = { ...base, ...extended };
+            return Object.assign(combined, { extend: extend(combined) });
+        };
+    }
+    return Object.assign(client, { extend: extend(client) });
+}
+/**
+ * Defines a typed JSON-RPC schema for the client.
+ * Note: This is a runtime noop function.
+ */
+function rpcSchema() {
+    return null;
+}
+//# sourceMappingURL=createClient.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/constants/abis.js
+var abis = __nccwpck_require__(3280);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/abi/decodeFunctionResult.js
+var decodeFunctionResult = __nccwpck_require__(4759);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/abi/encodeFunctionData.js + 1 modules
+var encodeFunctionData = __nccwpck_require__(3955);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/address/getAddress.js
+var getAddress = __nccwpck_require__(1006);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/chain/getChainContractAddress.js
+var getChainContractAddress = __nccwpck_require__(8392);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/data/size.js
+var data_size = __nccwpck_require__(6411);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/data/trim.js
+var trim = __nccwpck_require__(4146);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/encoding/toHex.js
+var toHex = __nccwpck_require__(747);
 // EXTERNAL MODULE: ./node_modules/viem/_esm/errors/base.js + 1 modules
 var base = __nccwpck_require__(9298);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/transport.js
+// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/contract.js + 1 modules
+var contract = __nccwpck_require__(2193);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/ens/errors.js
 
-class UrlRequiredError extends base/* BaseError */.C {
-    constructor() {
-        super('No URL was provided to the Transport. Please provide a valid RPC URL to the Transport.', {
-            docsPath: '/docs/clients/intro',
-            name: 'UrlRequiredError',
-        });
+
+/*
+ * @description Checks if error is a valid null result UniversalResolver error
+ */
+function isNullUniversalResolverError(err) {
+    if (!(err instanceof base/* BaseError */.C))
+        return false;
+    const cause = err.walk((e) => e instanceof contract/* ContractFunctionRevertedError */.M);
+    if (!(cause instanceof contract/* ContractFunctionRevertedError */.M))
+        return false;
+    if (cause.data?.errorName === 'HttpError')
+        return true;
+    if (cause.data?.errorName === 'ResolverError')
+        return true;
+    if (cause.data?.errorName === 'ResolverNotContract')
+        return true;
+    if (cause.data?.errorName === 'ResolverNotFound')
+        return true;
+    if (cause.data?.errorName === 'ReverseAddressMismatch')
+        return true;
+    if (cause.data?.errorName === 'UnsupportedResolverProfile')
+        return true;
+    return false;
+}
+//# sourceMappingURL=errors.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/ens/localBatchGatewayRequest.js + 3 modules
+var localBatchGatewayRequest = __nccwpck_require__(3547);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/data/concat.js
+var concat = __nccwpck_require__(5878);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/encoding/toBytes.js
+var toBytes = __nccwpck_require__(2497);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/hash/keccak256.js
+var keccak256 = __nccwpck_require__(327);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/data/isHex.js
+var isHex = __nccwpck_require__(4381);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/ens/encodedLabelToLabelhash.js
+
+function encodedLabelToLabelhash(label) {
+    if (label.length !== 66)
+        return null;
+    if (label.indexOf('[') !== 0)
+        return null;
+    if (label.indexOf(']') !== 65)
+        return null;
+    const hash = `0x${label.slice(1, 65)}`;
+    if (!(0,isHex/* isHex */.q)(hash))
+        return null;
+    return hash;
+}
+//# sourceMappingURL=encodedLabelToLabelhash.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/ens/namehash.js
+
+
+
+
+
+/**
+ * @description Hashes ENS name
+ *
+ * - Since ENS names prohibit certain forbidden characters (e.g. underscore) and have other validation rules, you likely want to [normalize ENS names](https://docs.ens.domains/contract-api-reference/name-processing#normalising-names) with [UTS-46 normalization](https://unicode.org/reports/tr46) before passing them to `namehash`. You can use the built-in [`normalize`](https://viem.sh/docs/ens/utilities/normalize) function for this.
+ *
+ * @example
+ * namehash('wevm.eth')
+ * '0x08c85f2f4059e930c45a6aeff9dcd3bd95dc3c5c1cddef6a0626b31152248560'
+ *
+ * @link https://eips.ethereum.org/EIPS/eip-137
+ */
+function namehash(name) {
+    let result = new Uint8Array(32).fill(0);
+    if (!name)
+        return (0,toHex/* bytesToHex */.My)(result);
+    const labels = name.split('.');
+    // Iterate in reverse order building up hash
+    for (let i = labels.length - 1; i >= 0; i -= 1) {
+        const hashFromEncodedLabel = encodedLabelToLabelhash(labels[i]);
+        const hashed = hashFromEncodedLabel
+            ? (0,toBytes/* toBytes */.ZJ)(hashFromEncodedLabel)
+            : (0,keccak256/* keccak256 */.S)((0,toBytes/* stringToBytes */.Af)(labels[i]), 'bytes');
+        result = (0,keccak256/* keccak256 */.S)((0,concat/* concat */.xW)([result, hashed]), 'bytes');
     }
+    return (0,toHex/* bytesToHex */.My)(result);
 }
-//# sourceMappingURL=transport.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/promise/createBatchScheduler.js
-var createBatchScheduler = __nccwpck_require__(7940);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/utils.js
-var utils = __nccwpck_require__(8400);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/promise/withTimeout.js
-
-function withTimeout(fn, { errorInstance = new Error('timed out'), timeout, signal, }) {
-    return new Promise((resolve, reject) => {
-        ;
-        (async () => {
-            let timeoutId;
-            const controller = new AbortController();
-            try {
-                if (timeout > 0) {
-                    timeoutId = setTimeout(() => {
-                        if (signal) {
-                            controller.abort();
-                        }
-                        else {
-                            reject(errorInstance);
-                        }
-                    }, timeout); // need to cast because bun globals.d.ts overrides @types/node
-                }
-                resolve(await fn({ signal: controller?.signal || null }));
-            }
-            catch (err) {
-                if (controller?.signal.aborted && (0,utils/* isAbortError */.zf)(err)) {
-                    reject(errorInstance);
-                    return;
-                }
-                reject(err);
-            }
-            finally {
-                clearTimeout(timeoutId);
-            }
-        })();
-    });
+//# sourceMappingURL=namehash.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/ens/encodeLabelhash.js
+function encodeLabelhash(hash) {
+    return `[${hash.slice(2)}]`;
 }
-//# sourceMappingURL=withTimeout.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/stringify.js
-var stringify = __nccwpck_require__(2162);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/rpc/id.js
-function createIdStore() {
-    return {
-        current: 0,
-        take() {
-            return this.current++;
-        },
-        reset() {
-            this.current = 0;
-        },
-    };
+//# sourceMappingURL=encodeLabelhash.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/ens/labelhash.js
+
+
+
+
+/**
+ * @description Hashes ENS label
+ *
+ * - Since ENS labels prohibit certain forbidden characters (e.g. underscore) and have other validation rules, you likely want to [normalize ENS labels](https://docs.ens.domains/contract-api-reference/name-processing#normalising-names) with [UTS-46 normalization](https://unicode.org/reports/tr46) before passing them to `labelhash`. You can use the built-in [`normalize`](https://viem.sh/docs/ens/utilities/normalize) function for this.
+ *
+ * @example
+ * labelhash('eth')
+ * '0x4f5b812789fc606be1b3b16908db13fc7a9adf7ca72641f84d75b47069d3d7f0'
+ */
+function labelhash(label) {
+    const result = new Uint8Array(32).fill(0);
+    if (!label)
+        return (0,toHex/* bytesToHex */.My)(result);
+    return encodedLabelToLabelhash(label) || (0,keccak256/* keccak256 */.S)((0,toBytes/* stringToBytes */.Af)(label));
 }
-const idCache = /*#__PURE__*/ createIdStore();
-//# sourceMappingURL=id.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/rpc/http.js
+//# sourceMappingURL=labelhash.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/ens/packetToBytes.js
 
 
 
-
-
-function getHttpRpcClient(url_, options = {}) {
-    const { url, headers: headers_url } = parseUrl(url_);
-    return {
-        async request(params) {
-            const { body, fetchFn = options.fetchFn ?? fetch, onRequest = options.onRequest, onResponse = options.onResponse, timeout = options.timeout ?? 10_000, } = params;
-            const fetchOptions = {
-                ...(options.fetchOptions ?? {}),
-                ...(params.fetchOptions ?? {}),
-            };
-            const { headers, method, signal: signal_ } = fetchOptions;
-            try {
-                const response = await withTimeout(async ({ signal }) => {
-                    const init = {
-                        ...fetchOptions,
-                        body: Array.isArray(body)
-                            ? (0,stringify/* stringify */.A)(body.map((body) => ({
-                                jsonrpc: '2.0',
-                                id: body.id ?? idCache.take(),
-                                ...body,
-                            })))
-                            : (0,stringify/* stringify */.A)({
-                                jsonrpc: '2.0',
-                                id: body.id ?? idCache.take(),
-                                ...body,
-                            }),
-                        headers: {
-                            ...headers_url,
-                            'Content-Type': 'application/json',
-                            ...headers,
-                        },
-                        method: method || 'POST',
-                        signal: signal_ || (timeout > 0 ? signal : null),
-                    };
-                    const request = new Request(url, init);
-                    const args = (await onRequest?.(request, init)) ?? { ...init, url };
-                    const response = await fetchFn(args.url ?? url, args);
-                    return response;
-                }, {
-                    errorInstance: new errors_request/* TimeoutError */.MU({ body, url }),
-                    timeout,
-                    signal: true,
-                });
-                if (onResponse)
-                    await onResponse(response);
-                let data;
-                if (response.headers.get('Content-Type')?.startsWith('application/json'))
-                    data = await response.json();
-                else {
-                    data = await response.text();
-                    try {
-                        data = JSON.parse(data || '{}');
-                    }
-                    catch (err) {
-                        if (response.ok)
-                            throw err;
-                        data = { error: data };
-                    }
-                }
-                if (!response.ok) {
-                    // If the response body contains a valid JSON-RPC error, return it
-                    // so it flows through the normal RPC error handling pipeline.
-                    if (typeof data.error?.code === 'number' &&
-                        typeof data.error?.message === 'string')
-                        return data;
-                    throw new errors_request/* HttpRequestError */.Ci({
-                        body,
-                        details: (0,stringify/* stringify */.A)(data.error) || response.statusText,
-                        headers: response.headers,
-                        status: response.status,
-                        url,
-                    });
-                }
-                return data;
-            }
-            catch (err) {
-                if (signal_?.aborted)
-                    throw (0,utils/* getAbortError */.TY)(signal_);
-                if ((0,utils/* isAbortError */.zf)(err))
-                    throw err;
-                if (err instanceof errors_request/* HttpRequestError */.Ci)
-                    throw err;
-                if (err instanceof errors_request/* TimeoutError */.MU)
-                    throw err;
-                throw new errors_request/* HttpRequestError */.Ci({
-                    body,
-                    cause: err,
-                    url,
-                });
-            }
-        },
-    };
-}
-/** @internal */
-function parseUrl(url_) {
-    try {
-        const url = new URL(url_);
-        const result = (() => {
-            // Handle Basic authentication credentials
-            if (url.username) {
-                const credentials = `${decodeURIComponent(url.username)}:${decodeURIComponent(url.password)}`;
-                url.username = '';
-                url.password = '';
-                return {
-                    url: url.toString(),
-                    headers: { Authorization: `Basic ${btoa(credentials)}` },
-                };
-            }
-            return;
-        })();
-        return { url: url.toString(), ...result };
+/*
+ * @description Encodes a DNS packet into a ByteArray containing a UDP payload.
+ *
+ * @example
+ * packetToBytes('awkweb.eth')
+ * '0x0661776b7765620365746800'
+ *
+ * @see https://docs.ens.domains/resolution/names#dns
+ *
+ */
+function packetToBytes(packet) {
+    // strip leading and trailing `.`
+    const value = packet.replace(/^\.|\.$/gm, '');
+    if (value.length === 0)
+        return new Uint8Array(1);
+    const bytes = new Uint8Array((0,toBytes/* stringToBytes */.Af)(value).byteLength + 2);
+    let offset = 0;
+    const list = value.split('.');
+    for (let i = 0; i < list.length; i++) {
+        let encoded = (0,toBytes/* stringToBytes */.Af)(list[i]);
+        // if the length is > 255, make the encoded label value a labelhash
+        // this is compatible with the universal resolver
+        if (encoded.byteLength > 255)
+            encoded = (0,toBytes/* stringToBytes */.Af)(encodeLabelhash(labelhash(list[i])));
+        bytes[offset] = encoded.length;
+        bytes.set(encoded, offset + 1);
+        offset += encoded.length + 1;
     }
-    catch {
-        return { url: url_ };
-    }
+    if (bytes.byteLength !== offset + 1)
+        return bytes.slice(0, offset + 1);
+    return bytes;
 }
-//# sourceMappingURL=http.js.map
+//# sourceMappingURL=packetToBytes.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/getAction.js
+/**
+ * Retrieves and returns an action from the client (if exists), and falls
+ * back to the tree-shakable action.
+ *
+ * Useful for extracting overridden actions from a client (ie. if a consumer
+ * wants to override the `sendTransaction` implementation).
+ */
+function getAction(client, actionFn, 
+// Some minifiers drop `Function.prototype.name`, or replace it with short letters,
+// meaning that `actionFn.name` will not always work. For that case, the consumer
+// needs to pass the name explicitly.
+name) {
+    const action_implicit = client[actionFn.name];
+    if (typeof action_implicit === 'function')
+        return action_implicit;
+    const action_explicit = client[name];
+    if (typeof action_explicit === 'function')
+        return action_explicit;
+    return (params) => actionFn(client, params);
+}
+//# sourceMappingURL=getAction.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/abi.js
+var errors_abi = __nccwpck_require__(1323);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/request.js
+var errors_request = __nccwpck_require__(1168);
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/rpc.js
 
 
@@ -42650,4939 +42742,6 @@ class UnknownRpcError extends RpcError {
     }
 }
 //# sourceMappingURL=rpc.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/lru.js
-var lru = __nccwpck_require__(8718);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/promise/withDedupe.js
-
-/** @internal */
-const promiseCache = /*#__PURE__*/ new lru/* LruMap */.A(8192);
-/** Deduplicates in-flight promises. */
-function withDedupe(fn, { enabled = true, id }) {
-    if (!enabled || !id)
-        return fn();
-    if (promiseCache.get(id))
-        return promiseCache.get(id);
-    const promise = fn().finally(() => promiseCache.delete(id));
-    promiseCache.set(id, promise);
-    return promise;
-}
-//# sourceMappingURL=withDedupe.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/wait.js
-
-async function wait(time, { signal } = {}) {
-    return new Promise((resolve, reject) => {
-        if (signal?.aborted) {
-            reject((0,utils/* getAbortError */.TY)(signal));
-            return;
-        }
-        const cleanup = () => signal?.removeEventListener('abort', onAbort);
-        const timeout = setTimeout(() => {
-            cleanup();
-            resolve();
-        }, time);
-        const onAbort = () => {
-            clearTimeout(timeout);
-            cleanup();
-            reject((0,utils/* getAbortError */.TY)(signal));
-        };
-        signal?.addEventListener('abort', onAbort, { once: true });
-    });
-}
-//# sourceMappingURL=wait.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/promise/withRetry.js
-
-
-function withRetry(fn, { delay: delay_ = 100, retryCount = 2, shouldRetry = () => true, signal, } = {}) {
-    return new Promise((resolve, reject) => {
-        const attemptRetry = async ({ count = 0 } = {}) => {
-            if (signal?.aborted) {
-                reject((0,utils/* getAbortError */.TY)(signal));
-                return;
-            }
-            const retry = async ({ error }) => {
-                const delay = typeof delay_ === 'function' ? delay_({ count, error }) : delay_;
-                if (delay) {
-                    try {
-                        await wait(delay, { signal });
-                    }
-                    catch (err) {
-                        reject(err);
-                        return;
-                    }
-                }
-                attemptRetry({ count: count + 1 });
-            };
-            try {
-                const data = await fn();
-                resolve(data);
-            }
-            catch (err) {
-                if (signal?.aborted) {
-                    reject((0,utils/* getAbortError */.TY)(signal));
-                    return;
-                }
-                if ((0,utils/* isAbortError */.zf)(err)) {
-                    reject(err);
-                    return;
-                }
-                if (count < retryCount &&
-                    (await shouldRetry({ count, error: err })))
-                    return retry({ error: err });
-                reject(err);
-            }
-        };
-        attemptRetry();
-    });
-}
-//# sourceMappingURL=withRetry.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/buildRequest.js
-
-
-
-
-
-
-
-function buildRequest(request, options = {}) {
-    return async (args, overrideOptions = {}) => {
-        const { dedupe = false, methods, retryDelay = 150, retryCount = 3, signal, uid, } = {
-            ...options,
-            ...overrideOptions,
-        };
-        const { method } = args;
-        if (methods?.exclude?.includes(method))
-            throw new MethodNotSupportedRpcError(new Error('method not supported'), {
-                method,
-            });
-        if (methods?.include && !methods.include.includes(method))
-            throw new MethodNotSupportedRpcError(new Error('method not supported'), {
-                method,
-            });
-        if (signal?.aborted)
-            throw (0,utils/* getAbortError */.TY)(signal);
-        const requestId = dedupe
-            ? hashString(`${uid}.${(0,stringify/* stringify */.A)(args)}`)
-            : undefined;
-        return withDedupe(() => withRetry(async () => {
-            try {
-                return await request(args, signal ? { signal } : undefined);
-            }
-            catch (err_) {
-                if (signal?.aborted)
-                    throw (0,utils/* getAbortError */.TY)(signal);
-                if ((0,utils/* isAbortError */.zf)(err_))
-                    throw err_;
-                const err = err_;
-                switch (err.code) {
-                    // -32700
-                    case ParseRpcError.code:
-                        throw new ParseRpcError(err);
-                    // -32600
-                    case InvalidRequestRpcError.code:
-                        throw new InvalidRequestRpcError(err);
-                    // -32601
-                    case MethodNotFoundRpcError.code:
-                        throw new MethodNotFoundRpcError(err, { method: args.method });
-                    // -32602
-                    case InvalidParamsRpcError.code:
-                        throw new InvalidParamsRpcError(err);
-                    // -32603
-                    case InternalRpcError.code:
-                        throw new InternalRpcError(err);
-                    // -32000
-                    case InvalidInputRpcError.code:
-                        throw new InvalidInputRpcError(err);
-                    // -32001
-                    case ResourceNotFoundRpcError.code:
-                        throw new ResourceNotFoundRpcError(err);
-                    // -32002
-                    case ResourceUnavailableRpcError.code:
-                        throw new ResourceUnavailableRpcError(err);
-                    // -32003
-                    case TransactionRejectedRpcError.code:
-                        throw new TransactionRejectedRpcError(err);
-                    // -32004
-                    case MethodNotSupportedRpcError.code:
-                        throw new MethodNotSupportedRpcError(err, {
-                            method: args.method,
-                        });
-                    // -32005
-                    case LimitExceededRpcError.code:
-                        throw new LimitExceededRpcError(err);
-                    // -32006
-                    case JsonRpcVersionUnsupportedError.code:
-                        throw new JsonRpcVersionUnsupportedError(err);
-                    // 4001
-                    case UserRejectedRequestError.code:
-                        throw new UserRejectedRequestError(err);
-                    // 4100
-                    case UnauthorizedProviderError.code:
-                        throw new UnauthorizedProviderError(err);
-                    // 4200
-                    case UnsupportedProviderMethodError.code:
-                        throw new UnsupportedProviderMethodError(err);
-                    // 4900
-                    case ProviderDisconnectedError.code:
-                        throw new ProviderDisconnectedError(err);
-                    // 4901
-                    case ChainDisconnectedError.code:
-                        throw new ChainDisconnectedError(err);
-                    // 4902
-                    case SwitchChainError.code:
-                        throw new SwitchChainError(err);
-                    // 5700
-                    case UnsupportedNonOptionalCapabilityError.code:
-                        throw new UnsupportedNonOptionalCapabilityError(err);
-                    // 5710
-                    case UnsupportedChainIdError.code:
-                        throw new UnsupportedChainIdError(err);
-                    // 5720
-                    case DuplicateIdError.code:
-                        throw new DuplicateIdError(err);
-                    // 5730
-                    case UnknownBundleIdError.code:
-                        throw new UnknownBundleIdError(err);
-                    // 5740
-                    case BundleTooLargeError.code:
-                        throw new BundleTooLargeError(err);
-                    // 5750
-                    case AtomicReadyWalletRejectedUpgradeError.code:
-                        throw new AtomicReadyWalletRejectedUpgradeError(err);
-                    // 5760
-                    case AtomicityNotSupportedError.code:
-                        throw new AtomicityNotSupportedError(err);
-                    // CAIP-25: User Rejected Error
-                    // https://docs.walletconnect.com/2.0/specs/clients/sign/error-codes#rejected-caip-25
-                    case 5000:
-                        throw new UserRejectedRequestError(err);
-                    // WalletConnect: Session Settlement Failed
-                    // https://docs.walletconnect.com/2.0/specs/clients/sign/error-codes
-                    case WalletConnectSessionSettlementError.code:
-                        throw new WalletConnectSessionSettlementError(err);
-                    default:
-                        if (err_ instanceof base/* BaseError */.C)
-                            throw err_;
-                        throw new UnknownRpcError(err);
-                }
-            }
-        }, {
-            delay: ({ count, error }) => {
-                // If we find a Retry-After header, let's retry after the given time.
-                if (error && error instanceof errors_request/* HttpRequestError */.Ci) {
-                    const retryAfter = error?.headers?.get('Retry-After');
-                    if (retryAfter?.match(/\d/))
-                        return Number.parseInt(retryAfter, 10) * 1000;
-                }
-                // Otherwise, let's retry with an exponential backoff.
-                return ~~(1 << count) * retryDelay;
-            },
-            retryCount,
-            signal,
-            shouldRetry: ({ error }) => shouldRetry(error),
-        }), { enabled: dedupe, id: requestId });
-    };
-}
-/** @internal */
-function shouldRetry(error) {
-    if ((0,utils/* isAbortError */.zf)(error))
-        return false;
-    if ('code' in error && typeof error.code === 'number') {
-        if (error.code === -1)
-            return true; // Unknown error
-        if (error.code === LimitExceededRpcError.code)
-            return true;
-        if (error.code === InternalRpcError.code)
-            return true;
-        // Too Many Requests — some providers (e.g. Alchemy in batch mode) return
-        // HTTP 200 with a JSON-RPC body of `{ code: 429 }` instead of an HTTP 429,
-        // so we need to handle this code in addition to the HTTP status check below.
-        if (error.code === 429)
-            return true;
-        return false;
-    }
-    if (error instanceof errors_request/* HttpRequestError */.Ci && error.status) {
-        // Forbidden
-        if (error.status === 403)
-            return true;
-        // Request Timeout
-        if (error.status === 408)
-            return true;
-        // Request Entity Too Large
-        if (error.status === 413)
-            return true;
-        // Too Many Requests
-        if (error.status === 429)
-            return true;
-        // Internal Server Error
-        if (error.status === 500)
-            return true;
-        // Bad Gateway
-        if (error.status === 502)
-            return true;
-        // Service Unavailable
-        if (error.status === 503)
-            return true;
-        // Gateway Timeout
-        if (error.status === 504)
-            return true;
-        return false;
-    }
-    return true;
-}
-/** @internal cyrb53 – fast, non-cryptographic 53-bit string hash */
-function hashString(str, seed = 0) {
-    let h1 = 0xdeadbeef ^ seed;
-    let h2 = 0x41c6ce57 ^ seed;
-    for (let i = 0; i < str.length; i++) {
-        const ch = str.charCodeAt(i);
-        h1 = Math.imul(h1 ^ ch, 2654435761);
-        h2 = Math.imul(h2 ^ ch, 1597334677);
-    }
-    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
-    h1 ^= Math.imul(h2 ^ (h2 >>> 16), 3266489909);
-    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
-    h2 ^= Math.imul(h1 ^ (h1 >>> 16), 3266489909);
-    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
-}
-//# sourceMappingURL=buildRequest.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/uid.js
-const size = 256;
-let index = size;
-let buffer;
-function uid_uid(length = 11) {
-    if (!buffer || index + length > size * 2) {
-        buffer = '';
-        index = 0;
-        for (let i = 0; i < size; i++) {
-            buffer += ((256 + Math.random() * 256) | 0).toString(16).substring(1);
-        }
-    }
-    return buffer.substring(index, index++ + length);
-}
-//# sourceMappingURL=uid.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/clients/transports/createTransport.js
-
-
-/**
- * @description Creates an transport intended to be used with a client.
- */
-function createTransport({ key, methods, name, request, retryCount = 3, retryDelay = 150, timeout, type, }, value) {
-    const uid = uid_uid();
-    return {
-        config: {
-            key,
-            methods,
-            name,
-            request,
-            retryCount,
-            retryDelay,
-            timeout,
-            type,
-        },
-        request: buildRequest(request, { methods, retryCount, retryDelay, uid }),
-        value,
-    };
-}
-//# sourceMappingURL=createTransport.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/clients/transports/http.js
-
-
-
-
-
-let signalId = 0;
-const signalIds = new WeakMap();
-function getSignalId(signal) {
-    if (!signal)
-        return 'default';
-    const id = signalIds.get(signal);
-    if (id !== undefined)
-        return id;
-    const nextId = signalId++;
-    signalIds.set(signal, nextId);
-    return nextId;
-}
-/**
- * @description Creates a HTTP transport that connects to a JSON-RPC API.
- */
-function http(
-/** URL of the JSON-RPC API. Defaults to the chain's public RPC URL. */
-url, config = {}) {
-    const { batch, fetchFn, fetchOptions, key = 'http', methods, name = 'HTTP JSON-RPC', onFetchRequest, onFetchResponse, retryDelay, raw, } = config;
-    return ({ chain, retryCount: retryCount_, timeout: timeout_ }) => {
-        const { batchSize = 1000, wait = 0 } = typeof batch === 'object' ? batch : {};
-        const retryCount = config.retryCount ?? retryCount_;
-        const timeout = timeout_ ?? config.timeout ?? 10_000;
-        const url_ = url || chain?.rpcUrls.default.http[0];
-        if (!url_)
-            throw new UrlRequiredError();
-        const rpcClient = getHttpRpcClient(url_, {
-            fetchFn,
-            fetchOptions,
-            onRequest: onFetchRequest,
-            onResponse: onFetchResponse,
-            timeout,
-        });
-        return createTransport({
-            key,
-            methods,
-            name,
-            async request({ method, params }, options) {
-                const body = { method, params };
-                const fetchOptions = options?.signal
-                    ? { signal: options.signal }
-                    : undefined;
-                const { schedule } = (0,createBatchScheduler/* createBatchScheduler */.u)({
-                    id: `${url_}.${getSignalId(options?.signal)}`,
-                    wait,
-                    shouldSplitBatch(requests) {
-                        return requests.length > batchSize;
-                    },
-                    fn: (body) => rpcClient.request({
-                        body,
-                        fetchOptions,
-                    }),
-                    sort: (a, b) => a.id - b.id,
-                });
-                const fn = async (body) => batch
-                    ? schedule(body)
-                    : [
-                        await rpcClient.request({
-                            body,
-                            fetchOptions,
-                        }),
-                    ];
-                const [{ error, result }] = await fn(body);
-                if (raw)
-                    return { error, result };
-                if (error)
-                    throw new errors_request/* RpcRequestError */.J8({
-                        body,
-                        error,
-                        url: url_,
-                    });
-                return result;
-            },
-            retryCount,
-            retryDelay,
-            timeout,
-            type: 'http',
-        }, {
-            fetchOptions,
-            url: url_,
-        });
-    };
-}
-//# sourceMappingURL=http.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/accounts/utils/parseAccount.js
-var parseAccount = __nccwpck_require__(304);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/clients/createClient.js
-
-
-function createClient(parameters) {
-    const { batch, chain, ccipRead, dataSuffix, key = 'base', name = 'Base Client', type = 'base', } = parameters;
-    const experimental_blockTag = parameters.experimental_blockTag ??
-        (typeof chain?.experimental_preconfirmationTime === 'number'
-            ? 'pending'
-            : undefined);
-    const blockTime = chain?.blockTime ?? 12_000;
-    const defaultPollingInterval = Math.min(Math.max(Math.floor(blockTime / 2), 500), 4_000);
-    const pollingInterval = parameters.pollingInterval ?? defaultPollingInterval;
-    const cacheTime = parameters.cacheTime ?? pollingInterval;
-    const account = parameters.account
-        ? (0,parseAccount/* parseAccount */.J)(parameters.account)
-        : undefined;
-    const { config, request, value } = parameters.transport({
-        account,
-        chain,
-        pollingInterval,
-    });
-    const transport = { ...config, ...value };
-    const client = {
-        account,
-        batch,
-        cacheTime,
-        ccipRead,
-        chain,
-        dataSuffix,
-        key,
-        name,
-        pollingInterval,
-        request,
-        transport,
-        type,
-        uid: uid_uid(),
-        ...(experimental_blockTag ? { experimental_blockTag } : {}),
-    };
-    function extend(base) {
-        return (extendFn) => {
-            const extended = extendFn(base);
-            for (const key in client)
-                delete extended[key];
-            const combined = { ...base, ...extended };
-            return Object.assign(combined, { extend: extend(combined) });
-        };
-    }
-    return Object.assign(client, { extend: extend(client) });
-}
-/**
- * Defines a typed JSON-RPC schema for the client.
- * Note: This is a runtime noop function.
- */
-function rpcSchema() {
-    return null;
-}
-//# sourceMappingURL=createClient.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/unit/formatGwei.js
-var formatGwei = __nccwpck_require__(5819);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/fee.js
-
-
-class BaseFeeScalarError extends base/* BaseError */.C {
-    constructor() {
-        super('`baseFeeMultiplier` must be greater than 1.', {
-            name: 'BaseFeeScalarError',
-        });
-    }
-}
-class Eip1559FeesNotSupportedError extends base/* BaseError */.C {
-    constructor() {
-        super('Chain does not support EIP-1559 fees.', {
-            name: 'Eip1559FeesNotSupportedError',
-        });
-    }
-}
-class MaxFeePerGasTooLowError extends base/* BaseError */.C {
-    constructor({ maxPriorityFeePerGas }) {
-        super(`\`maxFeePerGas\` cannot be less than the \`maxPriorityFeePerGas\` (${(0,formatGwei/* formatGwei */.Q)(maxPriorityFeePerGas)} gwei).`, { name: 'MaxFeePerGasTooLowError' });
-    }
-}
-//# sourceMappingURL=fee.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/node.js
-var node = __nccwpck_require__(5405);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/transaction.js
-var errors_transaction = __nccwpck_require__(3725);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/errors/getNodeError.js
-var getNodeError = __nccwpck_require__(7153);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/errors/getTransactionError.js
-
-
-
-function getTransactionError(err, { docsPath, ...args }) {
-    const cause = (() => {
-        const cause = (0,getNodeError/* getNodeError */.l)(err, args);
-        if (cause instanceof node/* UnknownNodeError */.RM)
-            return err;
-        return cause;
-    })();
-    return new errors_transaction/* TransactionExecutionError */.$s(cause, {
-        docsPath,
-        ...args,
-    });
-}
-//# sourceMappingURL=getTransactionError.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/formatters/extract.js
-var extract = __nccwpck_require__(5098);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/encoding/fromHex.js
-var fromHex = __nccwpck_require__(2248);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/formatters/formatter.js
-function defineFormatter(type, format) {
-    return ({ exclude, format: overrides, }) => {
-        return {
-            exclude,
-            format: (args, action) => {
-                const formatted = format(args, action);
-                if (exclude) {
-                    for (const key of exclude) {
-                        delete formatted[key];
-                    }
-                }
-                return {
-                    ...formatted,
-                    ...overrides(args, action),
-                };
-            },
-            type,
-        };
-    };
-}
-//# sourceMappingURL=formatter.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/formatters/transaction.js
-
-
-const transactionType = {
-    '0x0': 'legacy',
-    '0x1': 'eip2930',
-    '0x2': 'eip1559',
-    '0x3': 'eip4844',
-    '0x4': 'eip7702',
-};
-function formatTransaction(transaction, _) {
-    const transaction_ = {
-        ...transaction,
-        blockHash: transaction.blockHash ? transaction.blockHash : null,
-        blockNumber: transaction.blockNumber
-            ? BigInt(transaction.blockNumber)
-            : null,
-        ...(transaction.blockTimestamp != null && {
-            blockTimestamp: BigInt(transaction.blockTimestamp),
-        }),
-        chainId: transaction.chainId ? (0,fromHex/* hexToNumber */.ME)(transaction.chainId) : undefined,
-        gas: transaction.gas ? BigInt(transaction.gas) : undefined,
-        gasPrice: transaction.gasPrice ? BigInt(transaction.gasPrice) : undefined,
-        maxFeePerBlobGas: transaction.maxFeePerBlobGas
-            ? BigInt(transaction.maxFeePerBlobGas)
-            : undefined,
-        maxFeePerGas: transaction.maxFeePerGas
-            ? BigInt(transaction.maxFeePerGas)
-            : undefined,
-        maxPriorityFeePerGas: transaction.maxPriorityFeePerGas
-            ? BigInt(transaction.maxPriorityFeePerGas)
-            : undefined,
-        nonce: transaction.nonce ? (0,fromHex/* hexToNumber */.ME)(transaction.nonce) : undefined,
-        to: transaction.to ? transaction.to : null,
-        transactionIndex: transaction.transactionIndex
-            ? Number(transaction.transactionIndex)
-            : null,
-        type: transaction.type
-            ? transactionType[transaction.type]
-            : undefined,
-        typeHex: transaction.type ? transaction.type : undefined,
-        value: transaction.value ? BigInt(transaction.value) : undefined,
-        v: transaction.v ? BigInt(transaction.v) : undefined,
-    };
-    if (transaction.authorizationList)
-        transaction_.authorizationList = formatAuthorizationList(transaction.authorizationList);
-    transaction_.yParity = (() => {
-        // If `yParity` is provided, we will use it.
-        if (transaction.yParity)
-            return Number(transaction.yParity);
-        // If no `yParity` provided, try derive from `v`.
-        if (typeof transaction_.v === 'bigint') {
-            if (transaction_.v === 0n || transaction_.v === 27n)
-                return 0;
-            if (transaction_.v === 1n || transaction_.v === 28n)
-                return 1;
-            if (transaction_.v >= 35n)
-                return transaction_.v % 2n === 0n ? 1 : 0;
-        }
-        return undefined;
-    })();
-    if (transaction_.type === 'legacy') {
-        delete transaction_.accessList;
-        delete transaction_.maxFeePerBlobGas;
-        delete transaction_.maxFeePerGas;
-        delete transaction_.maxPriorityFeePerGas;
-        delete transaction_.yParity;
-    }
-    if (transaction_.type === 'eip2930') {
-        delete transaction_.maxFeePerBlobGas;
-        delete transaction_.maxFeePerGas;
-        delete transaction_.maxPriorityFeePerGas;
-    }
-    if (transaction_.type === 'eip1559')
-        delete transaction_.maxFeePerBlobGas;
-    return transaction_;
-}
-const defineTransaction = /*#__PURE__*/ defineFormatter('transaction', formatTransaction);
-//////////////////////////////////////////////////////////////////////////////
-function formatAuthorizationList(authorizationList) {
-    return authorizationList.map((authorization) => ({
-        address: authorization.address,
-        chainId: Number(authorization.chainId),
-        nonce: Number(authorization.nonce),
-        r: authorization.r,
-        s: authorization.s,
-        yParity: Number(authorization.yParity),
-    }));
-}
-//# sourceMappingURL=transaction.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/formatters/transactionRequest.js
-var transactionRequest = __nccwpck_require__(7466);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/getAction.js
-/**
- * Retrieves and returns an action from the client (if exists), and falls
- * back to the tree-shakable action.
- *
- * Useful for extracting overridden actions from a client (ie. if a consumer
- * wants to override the `sendTransaction` implementation).
- */
-function getAction(client, actionFn, 
-// Some minifiers drop `Function.prototype.name`, or replace it with short letters,
-// meaning that `actionFn.name` will not always work. For that case, the consumer
-// needs to pass the name explicitly.
-name) {
-    const action_implicit = client[actionFn.name];
-    if (typeof action_implicit === 'function')
-        return action_implicit;
-    const action_explicit = client[name];
-    if (typeof action_explicit === 'function')
-        return action_explicit;
-    return (params) => actionFn(client, params);
-}
-//# sourceMappingURL=getAction.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/transaction/assertRequest.js
-var assertRequest = __nccwpck_require__(2355);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/block.js
-
-class BlockNotFoundError extends base/* BaseError */.C {
-    constructor({ blockHash, blockNumber, }) {
-        let identifier = 'Block';
-        if (blockHash)
-            identifier = `Block at hash "${blockHash}"`;
-        if (blockNumber)
-            identifier = `Block at number "${blockNumber}"`;
-        super(`${identifier} could not be found.`, { name: 'BlockNotFoundError' });
-    }
-}
-//# sourceMappingURL=block.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/encoding/toHex.js
-var toHex = __nccwpck_require__(747);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/formatters/block.js
-
-
-function formatBlock(block, _) {
-    const transactions = (block.transactions ?? []).map((transaction) => {
-        if (typeof transaction === 'string')
-            return transaction;
-        return formatTransaction(transaction);
-    });
-    return {
-        ...block,
-        baseFeePerGas: block.baseFeePerGas ? BigInt(block.baseFeePerGas) : null,
-        blobGasUsed: block.blobGasUsed ? BigInt(block.blobGasUsed) : undefined,
-        difficulty: block.difficulty ? BigInt(block.difficulty) : undefined,
-        excessBlobGas: block.excessBlobGas
-            ? BigInt(block.excessBlobGas)
-            : undefined,
-        gasLimit: block.gasLimit ? BigInt(block.gasLimit) : undefined,
-        gasUsed: block.gasUsed ? BigInt(block.gasUsed) : undefined,
-        hash: block.hash ? block.hash : null,
-        logsBloom: block.logsBloom ? block.logsBloom : null,
-        nonce: block.nonce ? block.nonce : null,
-        number: block.number ? BigInt(block.number) : null,
-        size: block.size ? BigInt(block.size) : undefined,
-        timestamp: block.timestamp ? BigInt(block.timestamp) : undefined,
-        transactions,
-        totalDifficulty: block.totalDifficulty
-            ? BigInt(block.totalDifficulty)
-            : null,
-    };
-}
-const defineBlock = /*#__PURE__*/ defineFormatter('block', formatBlock);
-//# sourceMappingURL=block.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getBlock.js
-
-
-
-/**
- * Returns information about a block at a block number, hash, or tag.
- *
- * - Docs: https://viem.sh/docs/actions/public/getBlock
- * - Examples: https://stackblitz.com/github/wevm/viem/tree/main/examples/blocks_fetching-blocks
- * - JSON-RPC Methods:
- *   - Calls [`eth_getBlockByNumber`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getblockbynumber) for `blockNumber` & `blockTag`.
- *   - Calls [`eth_getBlockByHash`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getblockbyhash) for `blockHash`.
- *
- * @param client - Client to use
- * @param parameters - {@link GetBlockParameters}
- * @returns Information about the block. {@link GetBlockReturnType}
- *
- * @example
- * import { createPublicClient, http } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { getBlock } from 'viem/public'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const block = await getBlock(client)
- */
-async function getBlock_getBlock(client, { blockHash, blockNumber, blockTag = client.experimental_blockTag ?? 'latest', includeTransactions: includeTransactions_, } = {}) {
-    const includeTransactions = includeTransactions_ ?? false;
-    const blockNumberHex = blockNumber !== undefined ? (0,toHex/* numberToHex */.cK)(blockNumber) : undefined;
-    let block = null;
-    if (blockHash) {
-        block = await client.request({
-            method: 'eth_getBlockByHash',
-            params: [blockHash, includeTransactions],
-        }, { dedupe: true });
-    }
-    else {
-        block = await client.request({
-            method: 'eth_getBlockByNumber',
-            params: [blockNumberHex || blockTag, includeTransactions],
-        }, { dedupe: Boolean(blockNumberHex) });
-    }
-    if (!block)
-        throw new BlockNotFoundError({ blockHash, blockNumber });
-    const format = client.chain?.formatters?.block?.format || formatBlock;
-    return format(block, 'getBlock');
-}
-//# sourceMappingURL=getBlock.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getChainId.js
-
-/**
- * Returns the chain ID associated with the current network.
- *
- * - Docs: https://viem.sh/docs/actions/public/getChainId
- * - JSON-RPC Methods: [`eth_chainId`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_chainid)
- *
- * @param client - Client to use
- * @returns The current chain ID. {@link GetChainIdReturnType}
- *
- * @example
- * import { createPublicClient, http } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { getChainId } from 'viem/public'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const chainId = await getChainId(client)
- * // 1
- */
-async function getChainId_getChainId(client) {
-    const chainIdHex = await client.request({
-        method: 'eth_chainId',
-    }, { dedupe: true });
-    return (0,fromHex/* hexToNumber */.ME)(chainIdHex);
-}
-//# sourceMappingURL=getChainId.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/fillTransaction.js
-
-
-
-
-
-
-
-
-
-
-/**
- * Fills a transaction request with the necessary fields to be signed over.
- *
- * - Docs: https://viem.sh/docs/actions/public/fillTransaction
- *
- * @param client - Client to use
- * @param parameters - {@link FillTransactionParameters}
- * @returns The filled transaction. {@link FillTransactionReturnType}
- *
- * @example
- * import { createPublicClient, http } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { fillTransaction } from 'viem/public'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const result = await fillTransaction(client, {
- *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- *   to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
- *   value: parseEther('1'),
- * })
- */
-async function fillTransaction(client, parameters) {
-    const { account = client.account, accessList, authorizationList, chain = client.chain, blobVersionedHashes, blobs, data, gas, gasPrice, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, nonce: nonce_, nonceManager, to, type, value, ...rest } = parameters;
-    const nonce = await (async () => {
-        if (!account)
-            return nonce_;
-        if (!nonceManager)
-            return nonce_;
-        if (typeof nonce_ !== 'undefined')
-            return nonce_;
-        const account_ = (0,parseAccount/* parseAccount */.J)(account);
-        const chainId = chain
-            ? chain.id
-            : await getAction(client, getChainId_getChainId, 'getChainId')({});
-        return await nonceManager.consume({
-            address: account_.address,
-            chainId,
-            client,
-        });
-    })();
-    (0,assertRequest/* assertRequest */.c)(parameters);
-    const chainFormat = chain?.formatters?.transactionRequest?.format;
-    const format = chainFormat || transactionRequest/* formatTransactionRequest */.Bv;
-    const request = format({
-        // Pick out extra data that might exist on the chain's transaction request type.
-        ...(0,extract/* extract */.o)(rest, { format: chainFormat }),
-        account: account ? (0,parseAccount/* parseAccount */.J)(account) : undefined,
-        accessList,
-        authorizationList,
-        blobs,
-        blobVersionedHashes,
-        data,
-        gas,
-        gasPrice,
-        maxFeePerBlobGas,
-        maxFeePerGas,
-        maxPriorityFeePerGas,
-        nonce,
-        to,
-        type,
-        value,
-    }, 'fillTransaction');
-    try {
-        const response = await client.request({
-            method: 'eth_fillTransaction',
-            params: [request],
-        });
-        const format = chain?.formatters?.transaction?.format || formatTransaction;
-        const transaction = format(response.tx);
-        // Remove unnecessary fields.
-        delete transaction.blockHash;
-        delete transaction.blockNumber;
-        delete transaction.r;
-        delete transaction.s;
-        delete transaction.transactionIndex;
-        delete transaction.v;
-        delete transaction.yParity;
-        // Rewrite fields.
-        transaction.data = transaction.input;
-        // Preference supplied fees (some nodes do not take these preferences).
-        if (transaction.gas)
-            transaction.gas = parameters.gas ?? transaction.gas;
-        if (transaction.gasPrice)
-            transaction.gasPrice = parameters.gasPrice ?? transaction.gasPrice;
-        if (transaction.maxFeePerBlobGas)
-            transaction.maxFeePerBlobGas =
-                parameters.maxFeePerBlobGas ?? transaction.maxFeePerBlobGas;
-        if (transaction.maxFeePerGas)
-            transaction.maxFeePerGas =
-                parameters.maxFeePerGas ?? transaction.maxFeePerGas;
-        if (transaction.maxPriorityFeePerGas)
-            transaction.maxPriorityFeePerGas =
-                parameters.maxPriorityFeePerGas ?? transaction.maxPriorityFeePerGas;
-        if (typeof transaction.nonce !== 'undefined')
-            transaction.nonce = parameters.nonce ?? transaction.nonce;
-        // Build fee multiplier function.
-        const feeMultiplier = await (async () => {
-            if (typeof chain?.fees?.baseFeeMultiplier === 'function') {
-                const block = await getAction(client, getBlock_getBlock, 'getBlock')({});
-                return chain.fees.baseFeeMultiplier({
-                    block,
-                    client,
-                    request: parameters,
-                });
-            }
-            return chain?.fees?.baseFeeMultiplier ?? 1.2;
-        })();
-        if (feeMultiplier < 1)
-            throw new BaseFeeScalarError();
-        const decimals = feeMultiplier.toString().split('.')[1]?.length ?? 0;
-        const denominator = 10 ** decimals;
-        const multiplyFee = (base) => (base * BigInt(Math.ceil(feeMultiplier * denominator))) /
-            BigInt(denominator);
-        // Apply fee multiplier.
-        if (!transaction.feePayerSignature) {
-            if (transaction.maxFeePerGas && !parameters.maxFeePerGas)
-                transaction.maxFeePerGas = multiplyFee(transaction.maxFeePerGas);
-            if (transaction.gasPrice && !parameters.gasPrice)
-                transaction.gasPrice = multiplyFee(transaction.gasPrice);
-        }
-        return {
-            raw: response.raw,
-            transaction: {
-                from: request.from,
-                ...transaction,
-            },
-            ...(response.capabilities ? { capabilities: response.capabilities } : {}),
-        };
-    }
-    catch (err) {
-        throw getTransactionError(err, {
-            ...parameters,
-            chain: client.chain,
-        });
-    }
-}
-//# sourceMappingURL=fillTransaction.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/addChain.js
-
-/**
- * Adds an EVM chain to the wallet.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/addChain
- * - JSON-RPC Methods: [`eth_addEthereumChain`](https://eips.ethereum.org/EIPS/eip-3085)
- *
- * @param client - Client to use
- * @param parameters - {@link AddChainParameters}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { optimism } from 'viem/chains'
- * import { addChain } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   transport: custom(window.ethereum),
- * })
- * await addChain(client, { chain: optimism })
- */
-async function addChain(client, { chain }) {
-    const { id, name, nativeCurrency, rpcUrls, blockExplorers } = chain;
-    await client.request({
-        method: 'wallet_addEthereumChain',
-        params: [
-            {
-                chainId: (0,toHex/* numberToHex */.cK)(id),
-                chainName: name,
-                nativeCurrency,
-                rpcUrls: rpcUrls.default.http,
-                blockExplorerUrls: blockExplorers
-                    ? Object.values(blockExplorers).map(({ url }) => url)
-                    : undefined,
-            },
-        ],
-    }, { dedupe: true, retryCount: 0 });
-}
-//# sourceMappingURL=addChain.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/abi/encodeDeployData.js
-var encodeDeployData = __nccwpck_require__(2701);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/account.js
-
-class AccountNotFoundError extends base/* BaseError */.C {
-    constructor({ docsPath } = {}) {
-        super([
-            'Could not find an Account to execute with this Action.',
-            'Please provide an Account with the `account` argument on the Action, or by supplying an `account` to the Client.',
-        ].join('\n'), {
-            docsPath,
-            docsSlug: 'account',
-            name: 'AccountNotFoundError',
-        });
-    }
-}
-class AccountTypeNotSupportedError extends base/* BaseError */.C {
-    constructor({ docsPath, metaMessages, type, }) {
-        super(`Account type "${type}" is not supported.`, {
-            docsPath,
-            metaMessages,
-            name: 'AccountTypeNotSupportedError',
-        });
-    }
-}
-//# sourceMappingURL=account.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/address/getAddress.js
-var getAddress = __nccwpck_require__(1006);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/hash/keccak256.js
-var keccak256 = __nccwpck_require__(327);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/accounts/utils/publicKeyToAddress.js
-
-
-/**
- * @description Converts an ECDSA public key to an address.
- *
- * @param publicKey The public key to convert.
- *
- * @returns The address.
- */
-function publicKeyToAddress(publicKey) {
-    const address = (0,keccak256/* keccak256 */.S)(`0x${publicKey.substring(4)}`).substring(26);
-    return (0,getAddress/* checksumAddress */.o)(`0x${address}`);
-}
-//# sourceMappingURL=publicKeyToAddress.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/data/isHex.js
-var isHex = __nccwpck_require__(4381);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/data/size.js
-var data_size = __nccwpck_require__(6411);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/signature/recoverPublicKey.js
-
-
-
-
-async function recoverPublicKey({ hash, signature, }) {
-    const hashHex = (0,isHex/* isHex */.q)(hash) ? hash : (0,toHex/* toHex */.nj)(hash);
-    const { secp256k1 } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 8805));
-    const signature_ = (() => {
-        // typeof signature: `Signature`
-        if (typeof signature === 'object' && 'r' in signature && 's' in signature) {
-            const { r, s, v, yParity } = signature;
-            const yParityOrV = Number(yParity ?? v);
-            const recoveryBit = toRecoveryBit(yParityOrV);
-            return new secp256k1.Signature((0,fromHex/* hexToBigInt */.uU)(r), (0,fromHex/* hexToBigInt */.uU)(s)).addRecoveryBit(recoveryBit);
-        }
-        // typeof signature: `Hex | ByteArray`
-        const signatureHex = (0,isHex/* isHex */.q)(signature) ? signature : (0,toHex/* toHex */.nj)(signature);
-        if ((0,data_size/* size */.E)(signatureHex) !== 65)
-            throw new Error('invalid signature length');
-        const yParityOrV = (0,fromHex/* hexToNumber */.ME)(`0x${signatureHex.slice(130)}`);
-        const recoveryBit = toRecoveryBit(yParityOrV);
-        return secp256k1.Signature.fromCompact(signatureHex.substring(2, 130)).addRecoveryBit(recoveryBit);
-    })();
-    const publicKey = signature_
-        .recoverPublicKey(hashHex.substring(2))
-        .toHex(false);
-    return `0x${publicKey}`;
-}
-function toRecoveryBit(yParityOrV) {
-    if (yParityOrV === 0 || yParityOrV === 1)
-        return yParityOrV;
-    if (yParityOrV === 27)
-        return 0;
-    if (yParityOrV === 28)
-        return 1;
-    throw new Error('Invalid yParityOrV value');
-}
-//# sourceMappingURL=recoverPublicKey.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/signature/recoverAddress.js
-
-
-async function recoverAddress({ hash, signature, }) {
-    return publicKeyToAddress(await recoverPublicKey({ hash, signature }));
-}
-//# sourceMappingURL=recoverAddress.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/data/concat.js
-var concat = __nccwpck_require__(5878);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/encoding/toBytes.js
-var toBytes = __nccwpck_require__(2497);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/cursor.js
-var utils_cursor = __nccwpck_require__(6933);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/encoding/toRlp.js
-
-
-
-
-function toRlp(bytes, to = 'hex') {
-    const encodable = getEncodable(bytes);
-    const cursor = (0,utils_cursor/* createCursor */.l)(new Uint8Array(encodable.length));
-    encodable.encode(cursor);
-    if (to === 'hex')
-        return (0,toHex/* bytesToHex */.My)(cursor.bytes);
-    return cursor.bytes;
-}
-function bytesToRlp(bytes, to = 'bytes') {
-    return toRlp(bytes, to);
-}
-function hexToRlp(hex, to = 'hex') {
-    return toRlp(hex, to);
-}
-function getEncodable(bytes) {
-    if (Array.isArray(bytes))
-        return getEncodableList(bytes.map((x) => getEncodable(x)));
-    return getEncodableBytes(bytes);
-}
-function getEncodableList(list) {
-    const bodyLength = list.reduce((acc, x) => acc + x.length, 0);
-    const sizeOfBodyLength = getSizeOfLength(bodyLength);
-    const length = (() => {
-        if (bodyLength <= 55)
-            return 1 + bodyLength;
-        return 1 + sizeOfBodyLength + bodyLength;
-    })();
-    return {
-        length,
-        encode(cursor) {
-            if (bodyLength <= 55) {
-                cursor.pushByte(0xc0 + bodyLength);
-            }
-            else {
-                cursor.pushByte(0xc0 + 55 + sizeOfBodyLength);
-                if (sizeOfBodyLength === 1)
-                    cursor.pushUint8(bodyLength);
-                else if (sizeOfBodyLength === 2)
-                    cursor.pushUint16(bodyLength);
-                else if (sizeOfBodyLength === 3)
-                    cursor.pushUint24(bodyLength);
-                else
-                    cursor.pushUint32(bodyLength);
-            }
-            for (const { encode } of list) {
-                encode(cursor);
-            }
-        },
-    };
-}
-function getEncodableBytes(bytesOrHex) {
-    const bytes = typeof bytesOrHex === 'string' ? (0,toBytes/* hexToBytes */.aT)(bytesOrHex) : bytesOrHex;
-    const sizeOfBytesLength = getSizeOfLength(bytes.length);
-    const length = (() => {
-        if (bytes.length === 1 && bytes[0] < 0x80)
-            return 1;
-        if (bytes.length <= 55)
-            return 1 + bytes.length;
-        return 1 + sizeOfBytesLength + bytes.length;
-    })();
-    return {
-        length,
-        encode(cursor) {
-            if (bytes.length === 1 && bytes[0] < 0x80) {
-                cursor.pushBytes(bytes);
-            }
-            else if (bytes.length <= 55) {
-                cursor.pushByte(0x80 + bytes.length);
-                cursor.pushBytes(bytes);
-            }
-            else {
-                cursor.pushByte(0x80 + 55 + sizeOfBytesLength);
-                if (sizeOfBytesLength === 1)
-                    cursor.pushUint8(bytes.length);
-                else if (sizeOfBytesLength === 2)
-                    cursor.pushUint16(bytes.length);
-                else if (sizeOfBytesLength === 3)
-                    cursor.pushUint24(bytes.length);
-                else
-                    cursor.pushUint32(bytes.length);
-                cursor.pushBytes(bytes);
-            }
-        },
-    };
-}
-function getSizeOfLength(length) {
-    if (length < 2 ** 8)
-        return 1;
-    if (length < 2 ** 16)
-        return 2;
-    if (length < 2 ** 24)
-        return 3;
-    if (length < 2 ** 32)
-        return 4;
-    throw new base/* BaseError */.C('Length is too large.');
-}
-//# sourceMappingURL=toRlp.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/authorization/hashAuthorization.js
-
-
-
-
-
-/**
- * Computes an Authorization hash in [EIP-7702 format](https://eips.ethereum.org/EIPS/eip-7702): `keccak256('0x05' || rlp([chain_id, address, nonce]))`.
- */
-function hashAuthorization(parameters) {
-    const { chainId, nonce, to } = parameters;
-    const address = parameters.contractAddress ?? parameters.address;
-    const hash = (0,keccak256/* keccak256 */.S)((0,concat/* concatHex */.aP)([
-        '0x05',
-        toRlp([
-            chainId ? (0,toHex/* numberToHex */.cK)(chainId) : '0x',
-            address,
-            nonce ? (0,toHex/* numberToHex */.cK)(nonce) : '0x',
-        ]),
-    ]));
-    if (to === 'bytes')
-        return (0,toBytes/* hexToBytes */.aT)(hash);
-    return hash;
-}
-//# sourceMappingURL=hashAuthorization.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/authorization/recoverAuthorizationAddress.js
-
-
-async function recoverAuthorizationAddress(parameters) {
-    const { authorization, signature } = parameters;
-    return recoverAddress({
-        hash: hashAuthorization(authorization),
-        signature: (signature ?? authorization),
-    });
-}
-//# sourceMappingURL=recoverAuthorizationAddress.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/chain.js
-var errors_chain = __nccwpck_require__(9504);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/chain/assertCurrentChain.js
-
-function assertCurrentChain({ chain, currentChainId, }) {
-    if (!chain)
-        throw new errors_chain/* ChainNotFoundError */.jF();
-    if (currentChainId !== chain.id)
-        throw new errors_chain/* ChainMismatchError */.EH({ chain, currentChainId });
-}
-//# sourceMappingURL=assertCurrentChain.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getGasPrice.js
-/**
- * Returns the current price of gas (in wei).
- *
- * - Docs: https://viem.sh/docs/actions/public/getGasPrice
- * - JSON-RPC Methods: [`eth_gasPrice`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_gasprice)
- *
- * @param client - Client to use
- * @returns The gas price (in wei). {@link GetGasPriceReturnType}
- *
- * @example
- * import { createPublicClient, http } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { getGasPrice } from 'viem/public'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const gasPrice = await getGasPrice(client)
- */
-async function getGasPrice(client) {
-    const gasPrice = await client.request({
-        method: 'eth_gasPrice',
-    });
-    return BigInt(gasPrice);
-}
-//# sourceMappingURL=getGasPrice.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/estimateMaxPriorityFeePerGas.js
-
-
-
-
-
-/**
- * Returns an estimate for the max priority fee per gas (in wei) for a
- * transaction to be likely included in the next block.
- * Defaults to [`chain.fees.defaultPriorityFee`](/docs/clients/chains#fees-defaultpriorityfee) if set.
- *
- * - Docs: https://viem.sh/docs/actions/public/estimateMaxPriorityFeePerGas
- *
- * @param client - Client to use
- * @returns An estimate (in wei) for the max priority fee per gas. {@link EstimateMaxPriorityFeePerGasReturnType}
- *
- * @example
- * import { createPublicClient, http } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { estimateMaxPriorityFeePerGas } from 'viem/actions'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const maxPriorityFeePerGas = await estimateMaxPriorityFeePerGas(client)
- * // 10000000n
- */
-async function estimateMaxPriorityFeePerGas(client, args) {
-    return internal_estimateMaxPriorityFeePerGas(client, args);
-}
-async function internal_estimateMaxPriorityFeePerGas(client, args) {
-    const { block: block_, chain = client.chain, request } = args || {};
-    try {
-        const maxPriorityFeePerGas = chain?.fees?.maxPriorityFeePerGas ?? chain?.fees?.defaultPriorityFee;
-        if (typeof maxPriorityFeePerGas === 'function') {
-            const block = block_ || (await getAction(client, getBlock_getBlock, 'getBlock')({}));
-            const maxPriorityFeePerGas_ = await maxPriorityFeePerGas({
-                block,
-                client,
-                request,
-            });
-            if (maxPriorityFeePerGas_ === null)
-                throw new Error();
-            return maxPriorityFeePerGas_;
-        }
-        if (typeof maxPriorityFeePerGas !== 'undefined')
-            return maxPriorityFeePerGas;
-        const maxPriorityFeePerGasHex = await client.request({
-            method: 'eth_maxPriorityFeePerGas',
-        });
-        return (0,fromHex/* hexToBigInt */.uU)(maxPriorityFeePerGasHex);
-    }
-    catch {
-        // If the RPC Provider does not support `eth_maxPriorityFeePerGas`
-        // fall back to calculating it manually via `gasPrice - baseFeePerGas`.
-        // See: https://github.com/ethereum/pm/issues/328#:~:text=eth_maxPriorityFeePerGas%20after%20London%20will%20effectively%20return%20eth_gasPrice%20%2D%20baseFee
-        const [block, gasPrice] = await Promise.all([
-            block_
-                ? Promise.resolve(block_)
-                : getAction(client, getBlock_getBlock, 'getBlock')({}),
-            getAction(client, getGasPrice, 'getGasPrice')({}),
-        ]);
-        if (typeof block.baseFeePerGas !== 'bigint')
-            throw new Eip1559FeesNotSupportedError();
-        const maxPriorityFeePerGas = gasPrice - block.baseFeePerGas;
-        if (maxPriorityFeePerGas < 0n)
-            return 0n;
-        return maxPriorityFeePerGas;
-    }
-}
-//# sourceMappingURL=estimateMaxPriorityFeePerGas.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/estimateFeesPerGas.js
-
-
-
-
-
-/**
- * Returns an estimate for the fees per gas (in wei) for a
- * transaction to be likely included in the next block.
- * Defaults to [`chain.fees.estimateFeesPerGas`](/docs/clients/chains#fees-estimatefeespergas) if set.
- *
- * - Docs: https://viem.sh/docs/actions/public/estimateFeesPerGas
- *
- * @param client - Client to use
- * @param parameters - {@link EstimateFeesPerGasParameters}
- * @returns An estimate (in wei) for the fees per gas. {@link EstimateFeesPerGasReturnType}
- *
- * @example
- * import { createPublicClient, http } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { estimateFeesPerGas } from 'viem/actions'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const maxPriorityFeePerGas = await estimateFeesPerGas(client)
- * // { maxFeePerGas: ..., maxPriorityFeePerGas: ... }
- */
-async function estimateFeesPerGas(client, args) {
-    return internal_estimateFeesPerGas(client, args);
-}
-async function internal_estimateFeesPerGas(client, args) {
-    const { block: block_, chain = client.chain, request, type = 'eip1559', } = args || {};
-    const baseFeeMultiplier = await (async () => {
-        if (typeof chain?.fees?.baseFeeMultiplier === 'function')
-            return chain.fees.baseFeeMultiplier({
-                block: block_,
-                client,
-                request,
-            });
-        return chain?.fees?.baseFeeMultiplier ?? 1.2;
-    })();
-    if (baseFeeMultiplier < 1)
-        throw new BaseFeeScalarError();
-    const decimals = baseFeeMultiplier.toString().split('.')[1]?.length ?? 0;
-    const denominator = 10 ** decimals;
-    const multiply = (base) => (base * BigInt(Math.ceil(baseFeeMultiplier * denominator))) /
-        BigInt(denominator);
-    const block = block_
-        ? block_
-        : await getAction(client, getBlock_getBlock, 'getBlock')({});
-    if (typeof chain?.fees?.estimateFeesPerGas === 'function') {
-        const fees = (await chain.fees.estimateFeesPerGas({
-            block: block_,
-            client,
-            multiply,
-            request,
-            type,
-        }));
-        if (fees !== null)
-            return fees;
-    }
-    if (type === 'eip1559') {
-        if (typeof block.baseFeePerGas !== 'bigint')
-            throw new Eip1559FeesNotSupportedError();
-        const maxPriorityFeePerGas = typeof request?.maxPriorityFeePerGas === 'bigint'
-            ? request.maxPriorityFeePerGas
-            : await internal_estimateMaxPriorityFeePerGas(client, {
-                block: block,
-                chain,
-                request,
-            });
-        const baseFeePerGas = multiply(block.baseFeePerGas);
-        const maxFeePerGas = request?.maxFeePerGas ?? baseFeePerGas + maxPriorityFeePerGas;
-        return {
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-        };
-    }
-    const gasPrice = request?.gasPrice ??
-        multiply(await getAction(client, getGasPrice, 'getGasPrice')({}));
-    return {
-        gasPrice,
-    };
-}
-//# sourceMappingURL=estimateFeesPerGas.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/unit/formatEther.js
-var formatEther = __nccwpck_require__(7939);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/estimateGas.js
-
-
-
-
-class EstimateGasExecutionError extends base/* BaseError */.C {
-    constructor(cause, { account, docsPath, chain, data, gas, gasPrice, maxFeePerGas, maxPriorityFeePerGas, nonce, to, value, }) {
-        const prettyArgs = (0,errors_transaction/* prettyPrint */.aO)({
-            from: account?.address,
-            to,
-            value: typeof value !== 'undefined' &&
-                `${(0,formatEther/* formatEther */.c)(value)} ${chain?.nativeCurrency?.symbol || 'ETH'}`,
-            data,
-            gas,
-            gasPrice: typeof gasPrice !== 'undefined' && `${(0,formatGwei/* formatGwei */.Q)(gasPrice)} gwei`,
-            maxFeePerGas: typeof maxFeePerGas !== 'undefined' &&
-                `${(0,formatGwei/* formatGwei */.Q)(maxFeePerGas)} gwei`,
-            maxPriorityFeePerGas: typeof maxPriorityFeePerGas !== 'undefined' &&
-                `${(0,formatGwei/* formatGwei */.Q)(maxPriorityFeePerGas)} gwei`,
-            nonce,
-        });
-        super(cause.shortMessage, {
-            cause,
-            docsPath,
-            metaMessages: [
-                ...(cause.metaMessages ? [...cause.metaMessages, ' '] : []),
-                'Estimate Gas Arguments:',
-                prettyArgs,
-            ].filter(Boolean),
-            name: 'EstimateGasExecutionError',
-        });
-        Object.defineProperty(this, "cause", {
-            enumerable: true,
-            configurable: true,
-            writable: true,
-            value: void 0
-        });
-        this.cause = cause;
-    }
-}
-//# sourceMappingURL=estimateGas.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/errors/getEstimateGasError.js
-
-
-
-function getEstimateGasError(err, { docsPath, ...args }) {
-    const cause = (() => {
-        const cause = (0,getNodeError/* getNodeError */.l)(err, args);
-        if (cause instanceof node/* UnknownNodeError */.RM)
-            return err;
-        return cause;
-    })();
-    return new EstimateGasExecutionError(cause, {
-        docsPath,
-        ...args,
-    });
-}
-//# sourceMappingURL=getEstimateGasError.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/stateOverride.js
-var utils_stateOverride = __nccwpck_require__(9110);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/estimateGas.js
-
-
-
-
-
-
-
-
-
-
-/**
- * Estimates the gas necessary to complete a transaction without submitting it to the network.
- *
- * - Docs: https://viem.sh/docs/actions/public/estimateGas
- * - JSON-RPC Methods: [`eth_estimateGas`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_estimategas)
- *
- * @param client - Client to use
- * @param parameters - {@link EstimateGasParameters}
- * @returns The gas estimate (in gas units). {@link EstimateGasReturnType}
- *
- * @example
- * import { createPublicClient, http, parseEther } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { estimateGas } from 'viem/public'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const gasEstimate = await estimateGas(client, {
- *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- *   to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
- *   value: parseEther('1'),
- * })
- */
-async function estimateGas(client, args) {
-    const { account: account_ = client.account, prepare = true } = args;
-    const account = account_ ? (0,parseAccount/* parseAccount */.J)(account_) : undefined;
-    const parameters = (() => {
-        if (Array.isArray(prepare))
-            return prepare;
-        // Some RPC Providers do not compute versioned hashes from blobs. We will need
-        // to compute them.
-        if (account?.type !== 'local')
-            return ['blobVersionedHashes'];
-        return undefined;
-    })();
-    try {
-        const to = await (async () => {
-            // If `to` exists on the parameters, use that.
-            if (args.to)
-                return args.to;
-            // If no `to` exists, and we are sending a EIP-7702 transaction, use the
-            // address of the first authorization in the list.
-            if (args.authorizationList && args.authorizationList.length > 0)
-                return await recoverAuthorizationAddress({
-                    authorization: args.authorizationList[0],
-                }).catch(() => {
-                    throw new base/* BaseError */.C('`to` is required. Could not infer from `authorizationList`');
-                });
-            // Otherwise, we are sending a deployment transaction.
-            return undefined;
-        })();
-        const { accessList, authorizationList, blobs, blobVersionedHashes, blockNumber, blockTag, data, gas, gasPrice, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, nonce, value, stateOverride, ...rest } = prepare
-            ? (await prepareTransactionRequest(client, {
-                ...args,
-                parameters,
-                to,
-            }))
-            : args;
-        // If we get `gas` back from the prepared transaction request, which is
-        // different from the `gas` we provided, it was likely filled by other means
-        // during request preparation (e.g. `eth_fillTransaction` or `chain.transactionRequest.prepare`).
-        // (e.g. `eth_fillTransaction` or `chain.transactionRequest.prepare`).
-        if (gas && args.gas !== gas)
-            return gas;
-        const blockNumberHex = typeof blockNumber === 'bigint' ? (0,toHex/* numberToHex */.cK)(blockNumber) : undefined;
-        const block = blockNumberHex || blockTag;
-        const rpcStateOverride = (0,utils_stateOverride/* serializeStateOverride */.yH)(stateOverride);
-        (0,assertRequest/* assertRequest */.c)(args);
-        const chainFormat = client.chain?.formatters?.transactionRequest?.format;
-        const format = chainFormat || transactionRequest/* formatTransactionRequest */.Bv;
-        const request = format({
-            // Pick out extra data that might exist on the chain's transaction request type.
-            ...(0,extract/* extract */.o)(rest, { format: chainFormat }),
-            account,
-            accessList,
-            authorizationList,
-            blobs,
-            blobVersionedHashes,
-            data,
-            gasPrice,
-            maxFeePerBlobGas,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            nonce,
-            to,
-            value,
-        }, 'estimateGas');
-        return BigInt(await client.request({
-            method: 'eth_estimateGas',
-            params: rpcStateOverride
-                ? [
-                    request,
-                    block ?? client.experimental_blockTag ?? 'latest',
-                    rpcStateOverride,
-                ]
-                : block
-                    ? [request, block]
-                    : [request],
-        }));
-    }
-    catch (err) {
-        throw getEstimateGasError(err, {
-            ...args,
-            account,
-            chain: client.chain,
-        });
-    }
-}
-//# sourceMappingURL=estimateGas.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/block/formatBlockParameter.js
-var formatBlockParameter = __nccwpck_require__(4570);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getTransactionCount.js
-
-
-/**
- * Returns the number of [Transactions](https://viem.sh/docs/glossary/terms#transaction) an Account has sent.
- *
- * - Docs: https://viem.sh/docs/actions/public/getTransactionCount
- * - JSON-RPC Methods: [`eth_getTransactionCount`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_gettransactioncount)
- *
- * @param client - Client to use
- * @param parameters - {@link GetTransactionCountParameters}
- * @returns The number of transactions an account has sent. {@link GetTransactionCountReturnType}
- *
- * @example
- * import { createPublicClient, http } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { getTransactionCount } from 'viem/public'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const transactionCount = await getTransactionCount(client, {
- *   address: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- * })
- */
-async function getTransactionCount(client, { address, blockHash, blockNumber, blockTag = 'latest', requireCanonical, }) {
-    const block = (0,formatBlockParameter/* formatBlockParameter */.O)({
-        blockHash,
-        blockNumber,
-        blockTag,
-        requireCanonical,
-    });
-    const count = await client.request({
-        method: 'eth_getTransactionCount',
-        params: [address, block],
-    }, {
-        dedupe: typeof blockNumber === 'bigint' || blockHash !== undefined,
-    });
-    return (0,fromHex/* hexToNumber */.ME)(count);
-}
-//# sourceMappingURL=getTransactionCount.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/blob/blobsToCommitments.js
-
-
-/**
- * Compute commitments from a list of blobs.
- *
- * @example
- * ```ts
- * import { blobsToCommitments, toBlobs } from 'viem'
- * import { kzg } from './kzg'
- *
- * const blobs = toBlobs({ data: '0x1234' })
- * const commitments = blobsToCommitments({ blobs, kzg })
- * ```
- */
-function blobsToCommitments(parameters) {
-    const { kzg } = parameters;
-    const to = parameters.to ?? (typeof parameters.blobs[0] === 'string' ? 'hex' : 'bytes');
-    const blobs = (typeof parameters.blobs[0] === 'string'
-        ? parameters.blobs.map((x) => (0,toBytes/* hexToBytes */.aT)(x))
-        : parameters.blobs);
-    const commitments = [];
-    for (const blob of blobs)
-        commitments.push(Uint8Array.from(kzg.blobToKzgCommitment(blob)));
-    return (to === 'bytes'
-        ? commitments
-        : commitments.map((x) => (0,toHex/* bytesToHex */.My)(x)));
-}
-//# sourceMappingURL=blobsToCommitments.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/blob/blobsToProofs.js
-
-
-/**
- * Compute the proofs for a list of blobs and their commitments.
- *
- * @example
- * ```ts
- * import {
- *   blobsToCommitments,
- *   toBlobs
- * } from 'viem'
- * import { kzg } from './kzg'
- *
- * const blobs = toBlobs({ data: '0x1234' })
- * const commitments = blobsToCommitments({ blobs, kzg })
- * const proofs = blobsToProofs({ blobs, commitments, kzg })
- * ```
- */
-function blobsToProofs(parameters) {
-    const { kzg } = parameters;
-    const to = parameters.to ?? (typeof parameters.blobs[0] === 'string' ? 'hex' : 'bytes');
-    const blobs = (typeof parameters.blobs[0] === 'string'
-        ? parameters.blobs.map((x) => (0,toBytes/* hexToBytes */.aT)(x))
-        : parameters.blobs);
-    const commitments = (typeof parameters.commitments[0] === 'string'
-        ? parameters.commitments.map((x) => (0,toBytes/* hexToBytes */.aT)(x))
-        : parameters.commitments);
-    const proofs = [];
-    for (let i = 0; i < blobs.length; i++) {
-        const blob = blobs[i];
-        const commitment = commitments[i];
-        proofs.push(Uint8Array.from(kzg.computeBlobKzgProof(blob, commitment)));
-    }
-    return (to === 'bytes'
-        ? proofs
-        : proofs.map((x) => (0,toHex/* bytesToHex */.My)(x)));
-}
-//# sourceMappingURL=blobsToProofs.js.map
-// EXTERNAL MODULE: ./node_modules/@noble/hashes/esm/sha2.js + 1 modules
-var sha2 = __nccwpck_require__(4640);
-;// CONCATENATED MODULE: ./node_modules/@noble/hashes/esm/sha256.js
-/**
- * SHA2-256 a.k.a. sha256. In JS, it is the fastest hash, even faster than Blake3.
- *
- * To break sha256 using birthday attack, attackers need to try 2^128 hashes.
- * BTC network is doing 2^70 hashes/sec (2^95 hashes/year) as per 2025.
- *
- * Check out [FIPS 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
- * @module
- * @deprecated
- */
-
-/** @deprecated Use import from `noble/hashes/sha2` module */
-const SHA256 = (/* unused pure expression or super */ null && (SHA256n));
-/** @deprecated Use import from `noble/hashes/sha2` module */
-const sha256 = sha2/* sha256 */.sc;
-/** @deprecated Use import from `noble/hashes/sha2` module */
-const SHA224 = (/* unused pure expression or super */ null && (SHA224n));
-/** @deprecated Use import from `noble/hashes/sha2` module */
-const sha224 = (/* unused pure expression or super */ null && (sha224n));
-//# sourceMappingURL=sha256.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/hash/sha256.js
-
-
-
-
-function sha256_sha256(value, to_) {
-    const to = to_ || 'hex';
-    const bytes = sha256((0,isHex/* isHex */.q)(value, { strict: false }) ? (0,toBytes/* toBytes */.ZJ)(value) : value);
-    if (to === 'bytes')
-        return bytes;
-    return (0,toHex/* toHex */.nj)(bytes);
-}
-//# sourceMappingURL=sha256.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/blob/commitmentToVersionedHash.js
-
-
-/**
- * Transform a commitment to it's versioned hash.
- *
- * @example
- * ```ts
- * import {
- *   blobsToCommitments,
- *   commitmentToVersionedHash,
- *   toBlobs
- * } from 'viem'
- * import { kzg } from './kzg'
- *
- * const blobs = toBlobs({ data: '0x1234' })
- * const [commitment] = blobsToCommitments({ blobs, kzg })
- * const versionedHash = commitmentToVersionedHash({ commitment })
- * ```
- */
-function commitmentToVersionedHash(parameters) {
-    const { commitment, version = 1 } = parameters;
-    const to = parameters.to ?? (typeof commitment === 'string' ? 'hex' : 'bytes');
-    const versionedHash = sha256_sha256(commitment, 'bytes');
-    versionedHash.set([version], 0);
-    return (to === 'bytes' ? versionedHash : (0,toHex/* bytesToHex */.My)(versionedHash));
-}
-//# sourceMappingURL=commitmentToVersionedHash.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/blob/commitmentsToVersionedHashes.js
-
-/**
- * Transform a list of commitments to their versioned hashes.
- *
- * @example
- * ```ts
- * import {
- *   blobsToCommitments,
- *   commitmentsToVersionedHashes,
- *   toBlobs
- * } from 'viem'
- * import { kzg } from './kzg'
- *
- * const blobs = toBlobs({ data: '0x1234' })
- * const commitments = blobsToCommitments({ blobs, kzg })
- * const versionedHashes = commitmentsToVersionedHashes({ commitments })
- * ```
- */
-function commitmentsToVersionedHashes(parameters) {
-    const { commitments, version } = parameters;
-    const to = parameters.to ?? (typeof commitments[0] === 'string' ? 'hex' : 'bytes');
-    const hashes = [];
-    for (const commitment of commitments) {
-        hashes.push(commitmentToVersionedHash({
-            commitment,
-            to,
-            version,
-        }));
-    }
-    return hashes;
-}
-//# sourceMappingURL=commitmentsToVersionedHashes.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/constants/blob.js
-// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-4844.md#parameters
-/** Blob limit per transaction. */
-const blobsPerTransaction = 6;
-/** The number of bytes in a BLS scalar field element. */
-const bytesPerFieldElement = 32;
-/** The number of field elements in a blob. */
-const fieldElementsPerBlob = 4096;
-/** The number of bytes in a blob. */
-const bytesPerBlob = bytesPerFieldElement * fieldElementsPerBlob;
-/** Blob bytes limit per transaction. */
-const maxBytesPerTransaction = bytesPerBlob * blobsPerTransaction -
-    // terminator byte (0x80).
-    1 -
-    // zero byte (0x00) appended to each field element.
-    1 * fieldElementsPerBlob * blobsPerTransaction;
-//# sourceMappingURL=blob.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/constants/kzg.js
-// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-4844.md#parameters
-const versionedHashVersionKzg = 1;
-//# sourceMappingURL=kzg.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/blob.js
-
-
-class BlobSizeTooLargeError extends base/* BaseError */.C {
-    constructor({ maxSize, size }) {
-        super('Blob size is too large.', {
-            metaMessages: [`Max: ${maxSize} bytes`, `Given: ${size} bytes`],
-            name: 'BlobSizeTooLargeError',
-        });
-    }
-}
-class EmptyBlobError extends base/* BaseError */.C {
-    constructor() {
-        super('Blob data must not be empty.', { name: 'EmptyBlobError' });
-    }
-}
-class InvalidVersionedHashSizeError extends base/* BaseError */.C {
-    constructor({ hash, size, }) {
-        super(`Versioned hash "${hash}" size is invalid.`, {
-            metaMessages: ['Expected: 32', `Received: ${size}`],
-            name: 'InvalidVersionedHashSizeError',
-        });
-    }
-}
-class InvalidVersionedHashVersionError extends base/* BaseError */.C {
-    constructor({ hash, version, }) {
-        super(`Versioned hash "${hash}" version is invalid.`, {
-            metaMessages: [
-                `Expected: ${versionedHashVersionKzg}`,
-                `Received: ${version}`,
-            ],
-            name: 'InvalidVersionedHashVersionError',
-        });
-    }
-}
-//# sourceMappingURL=blob.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/blob/toBlobs.js
-
-
-
-
-
-
-/**
- * Transforms arbitrary data to blobs.
- *
- * @example
- * ```ts
- * import { toBlobs, stringToHex } from 'viem'
- *
- * const blobs = toBlobs({ data: stringToHex('hello world') })
- * ```
- */
-function toBlobs(parameters) {
-    const to = parameters.to ?? (typeof parameters.data === 'string' ? 'hex' : 'bytes');
-    const data = (typeof parameters.data === 'string'
-        ? (0,toBytes/* hexToBytes */.aT)(parameters.data)
-        : parameters.data);
-    const size_ = (0,data_size/* size */.E)(data);
-    if (!size_)
-        throw new EmptyBlobError();
-    if (size_ > maxBytesPerTransaction)
-        throw new BlobSizeTooLargeError({
-            maxSize: maxBytesPerTransaction,
-            size: size_,
-        });
-    const blobs = [];
-    let active = true;
-    let position = 0;
-    while (active) {
-        const blob = (0,utils_cursor/* createCursor */.l)(new Uint8Array(bytesPerBlob));
-        let size = 0;
-        while (size < fieldElementsPerBlob) {
-            const bytes = data.slice(position, position + (bytesPerFieldElement - 1));
-            // Push a zero byte so the field element doesn't overflow the BLS modulus.
-            blob.pushByte(0x00);
-            // Push the current segment of data bytes.
-            blob.pushBytes(bytes);
-            // If we detect that the current segment of data bytes is less than 31 bytes,
-            // we can stop processing and push a terminator byte to indicate the end of the blob.
-            if (bytes.length < 31) {
-                blob.pushByte(0x80);
-                active = false;
-                break;
-            }
-            size++;
-            position += 31;
-        }
-        blobs.push(blob);
-    }
-    return (to === 'bytes'
-        ? blobs.map((x) => x.bytes)
-        : blobs.map((x) => (0,toHex/* bytesToHex */.My)(x.bytes)));
-}
-//# sourceMappingURL=toBlobs.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/blob/toBlobSidecars.js
-
-
-
-/**
- * Transforms arbitrary data (or blobs, commitments, & proofs) into a sidecar array.
- *
- * @example
- * ```ts
- * import { toBlobSidecars, stringToHex } from 'viem'
- *
- * const sidecars = toBlobSidecars({ data: stringToHex('hello world') })
- * ```
- *
- * @example
- * ```ts
- * import {
- *   blobsToCommitments,
- *   toBlobs,
- *   blobsToProofs,
- *   toBlobSidecars,
- *   stringToHex
- * } from 'viem'
- *
- * const blobs = toBlobs({ data: stringToHex('hello world') })
- * const commitments = blobsToCommitments({ blobs, kzg })
- * const proofs = blobsToProofs({ blobs, commitments, kzg })
- *
- * const sidecars = toBlobSidecars({ blobs, commitments, proofs })
- * ```
- */
-function toBlobSidecars(parameters) {
-    const { data, kzg, to } = parameters;
-    const blobs = parameters.blobs ?? toBlobs({ data: data, to });
-    const commitments = parameters.commitments ?? blobsToCommitments({ blobs, kzg: kzg, to });
-    const proofs = parameters.proofs ?? blobsToProofs({ blobs, commitments, kzg: kzg, to });
-    const sidecars = [];
-    for (let i = 0; i < blobs.length; i++)
-        sidecars.push({
-            blob: blobs[i],
-            commitment: commitments[i],
-            proof: proofs[i],
-        });
-    return sidecars;
-}
-//# sourceMappingURL=toBlobSidecars.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/transaction/getTransactionType.js
-
-function getTransactionType(transaction) {
-    if (transaction.type)
-        return transaction.type;
-    if (typeof transaction.authorizationList !== 'undefined')
-        return 'eip7702';
-    if (typeof transaction.blobs !== 'undefined' ||
-        typeof transaction.blobVersionedHashes !== 'undefined' ||
-        typeof transaction.maxFeePerBlobGas !== 'undefined' ||
-        typeof transaction.sidecars !== 'undefined')
-        return 'eip4844';
-    if (typeof transaction.maxFeePerGas !== 'undefined' ||
-        typeof transaction.maxPriorityFeePerGas !== 'undefined') {
-        return 'eip1559';
-    }
-    if (typeof transaction.gasPrice !== 'undefined') {
-        if (typeof transaction.accessList !== 'undefined')
-            return 'eip2930';
-        return 'legacy';
-    }
-    throw new errors_transaction/* InvalidSerializableTransactionError */.Vg({ transaction });
-}
-//# sourceMappingURL=getTransactionType.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/prepareTransactionRequest.js
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const defaultParameters = [
-    'blobVersionedHashes',
-    'chainId',
-    'fees',
-    'gas',
-    'nonce',
-    'type',
-];
-/** @internal */
-const eip1559NetworkCache = /*#__PURE__*/ new Map();
-/** @internal */
-const supportsFillTransaction = /*#__PURE__*/ new lru/* LruMap */.A(128);
-/**
- * Prepares a transaction request for signing.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/prepareTransactionRequest
- *
- * @param args - {@link PrepareTransactionRequestParameters}
- * @returns The transaction request. {@link PrepareTransactionRequestReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { prepareTransactionRequest } from 'viem/actions'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const request = await prepareTransactionRequest(client, {
- *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- *   to: '0x0000000000000000000000000000000000000000',
- *   value: 1n,
- * })
- *
- * @example
- * // Account Hoisting
- * import { createWalletClient, http } from 'viem'
- * import { privateKeyToAccount } from 'viem/accounts'
- * import { mainnet } from 'viem/chains'
- * import { prepareTransactionRequest } from 'viem/actions'
- *
- * const client = createWalletClient({
- *   account: privateKeyToAccount('0x…'),
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const request = await prepareTransactionRequest(client, {
- *   to: '0x0000000000000000000000000000000000000000',
- *   value: 1n,
- * })
- */
-async function prepareTransactionRequest(client, args) {
-    let request = args;
-    request.account ??= client.account;
-    request.parameters ??= defaultParameters;
-    const { account: account_, chain = client.chain, nonceManager, parameters, } = request;
-    const prepareTransactionRequest = (() => {
-        if (typeof chain?.prepareTransactionRequest === 'function')
-            return {
-                fn: chain.prepareTransactionRequest,
-                runAt: ['beforeFillTransaction'],
-            };
-        if (Array.isArray(chain?.prepareTransactionRequest))
-            return {
-                fn: chain.prepareTransactionRequest[0],
-                runAt: chain.prepareTransactionRequest[1].runAt,
-            };
-        return undefined;
-    })();
-    let chainId;
-    async function getChainId() {
-        if (chainId)
-            return chainId;
-        if (typeof request.chainId !== 'undefined')
-            return request.chainId;
-        if (chain)
-            return chain.id;
-        const chainId_ = await getAction(client, getChainId_getChainId, 'getChainId')({});
-        chainId = chainId_;
-        return chainId;
-    }
-    const account = account_ ? (0,parseAccount/* parseAccount */.J)(account_) : account_;
-    let nonce = request.nonce;
-    if (parameters.includes('nonce') &&
-        typeof nonce === 'undefined' &&
-        account &&
-        nonceManager) {
-        const chainId = await getChainId();
-        nonce = await nonceManager.consume({
-            address: account.address,
-            chainId,
-            client,
-        });
-    }
-    if (prepareTransactionRequest?.fn &&
-        prepareTransactionRequest.runAt?.includes('beforeFillTransaction')) {
-        request = await prepareTransactionRequest.fn({ ...request, chain }, {
-            phase: 'beforeFillTransaction',
-        });
-        nonce ??= request.nonce;
-    }
-    const attemptFill = (() => {
-        // Do not attempt if blobs are provided.
-        if ((parameters.includes('blobVersionedHashes') ||
-            parameters.includes('sidecars')) &&
-            request.kzg &&
-            request.blobs)
-            return false;
-        // Do not attempt if `eth_fillTransaction` is not supported.
-        if (supportsFillTransaction.get(client.uid) === false)
-            return false;
-        // Should attempt `eth_fillTransaction` if "fees" or "gas" are required to be populated,
-        // otherwise, can just use the other individual calls.
-        const shouldAttempt = ['fees', 'gas'].some((parameter) => parameters.includes(parameter));
-        if (!shouldAttempt)
-            return false;
-        // Check if `eth_fillTransaction` needs to be called.
-        if (parameters.includes('chainId') && typeof request.chainId !== 'number')
-            return true;
-        if (parameters.includes('nonce') && typeof nonce !== 'number')
-            return true;
-        if (parameters.includes('fees') &&
-            typeof request.gasPrice !== 'bigint' &&
-            (typeof request.maxFeePerGas !== 'bigint' ||
-                typeof request.maxPriorityFeePerGas !== 'bigint'))
-            return true;
-        if (parameters.includes('gas') && typeof request.gas !== 'bigint')
-            return true;
-        return false;
-    })();
-    const fillResult = attemptFill
-        ? await getAction(client, fillTransaction, 'fillTransaction')({ ...request, nonce })
-            .then((result) => {
-            const { chainId, from, gas, gasPrice, nonce, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, type, ...rest } = result.transaction;
-            supportsFillTransaction.set(client.uid, true);
-            return {
-                ...request,
-                ...(from ? { from } : {}),
-                ...(type && !request.type ? { type } : {}),
-                ...(typeof chainId !== 'undefined' ? { chainId } : {}),
-                ...(typeof gas !== 'undefined' ? { gas } : {}),
-                ...(typeof gasPrice !== 'undefined' ? { gasPrice } : {}),
-                ...(typeof nonce !== 'undefined' ? { nonce } : {}),
-                ...(typeof maxFeePerBlobGas !== 'undefined' &&
-                    request.type !== 'legacy' &&
-                    request.type !== 'eip2930'
-                    ? { maxFeePerBlobGas }
-                    : {}),
-                ...(typeof maxFeePerGas !== 'undefined' &&
-                    request.type !== 'legacy' &&
-                    request.type !== 'eip2930'
-                    ? { maxFeePerGas }
-                    : {}),
-                ...(typeof maxPriorityFeePerGas !== 'undefined' &&
-                    request.type !== 'legacy' &&
-                    request.type !== 'eip2930'
-                    ? { maxPriorityFeePerGas }
-                    : {}),
-                ...('nonceKey' in rest && typeof rest.nonceKey !== 'undefined'
-                    ? { nonceKey: rest.nonceKey }
-                    : {}),
-                ...('keyAuthorization' in rest &&
-                    typeof rest.keyAuthorization !== 'undefined' &&
-                    rest.keyAuthorization !== null &&
-                    !('keyAuthorization' in request)
-                    ? { keyAuthorization: rest.keyAuthorization }
-                    : {}),
-                ...('feePayerSignature' in rest &&
-                    typeof rest.feePayerSignature !== 'undefined' &&
-                    rest.feePayerSignature !== null
-                    ? { feePayerSignature: rest.feePayerSignature }
-                    : {}),
-                ...('feeToken' in rest &&
-                    typeof rest.feeToken !== 'undefined' &&
-                    rest.feeToken !== null &&
-                    !('feeToken' in request)
-                    ? { feeToken: rest.feeToken }
-                    : {}),
-                ...(result.capabilities
-                    ? { _capabilities: result.capabilities }
-                    : {}),
-            };
-        })
-            .catch((e) => {
-            const error = e;
-            if (error.name !== 'TransactionExecutionError')
-                return request;
-            const executionReverted = error.walk?.((e) => {
-                const error = e;
-                return error.name === 'ExecutionRevertedError';
-            });
-            if (executionReverted)
-                throw e;
-            const unsupported = error.walk?.((e) => {
-                const error = e;
-                return (error.name === 'MethodNotFoundRpcError' ||
-                    error.name === 'MethodNotSupportedRpcError' ||
-                    error.message?.includes('eth_fillTransaction is not available'));
-            });
-            if (unsupported)
-                supportsFillTransaction.set(client.uid, false);
-            return request;
-        })
-        : request;
-    nonce ??= fillResult.nonce;
-    request = {
-        ...fillResult,
-        ...(account ? { from: account?.address } : {}),
-        ...(typeof nonce !== 'undefined' ? { nonce } : {}),
-    };
-    const { blobs, gas, kzg, type } = request;
-    if (prepareTransactionRequest?.fn &&
-        prepareTransactionRequest.runAt?.includes('beforeFillParameters')) {
-        request = await prepareTransactionRequest.fn({ ...request, chain }, {
-            phase: 'beforeFillParameters',
-        });
-    }
-    let block;
-    async function getBlock() {
-        if (block)
-            return block;
-        block = await getAction(client, getBlock_getBlock, 'getBlock')({ blockTag: 'latest' });
-        return block;
-    }
-    if (parameters.includes('nonce') &&
-        typeof nonce === 'undefined' &&
-        account &&
-        !nonceManager)
-        request.nonce = await getAction(client, getTransactionCount, 'getTransactionCount')({
-            address: account.address,
-            blockTag: 'pending',
-        });
-    if ((parameters.includes('blobVersionedHashes') ||
-        parameters.includes('sidecars')) &&
-        blobs &&
-        kzg) {
-        const commitments = blobsToCommitments({ blobs, kzg });
-        if (parameters.includes('blobVersionedHashes')) {
-            const versionedHashes = commitmentsToVersionedHashes({
-                commitments,
-                to: 'hex',
-            });
-            request.blobVersionedHashes = versionedHashes;
-        }
-        if (parameters.includes('sidecars')) {
-            const proofs = blobsToProofs({ blobs, commitments, kzg });
-            const sidecars = toBlobSidecars({
-                blobs,
-                commitments,
-                proofs,
-                to: 'hex',
-            });
-            request.sidecars = sidecars;
-        }
-    }
-    if (parameters.includes('chainId'))
-        request.chainId = await getChainId();
-    if ((parameters.includes('fees') || parameters.includes('type')) &&
-        typeof type === 'undefined') {
-        try {
-            request.type = getTransactionType(request);
-        }
-        catch {
-            let isEip1559Network = eip1559NetworkCache.get(client.uid);
-            if (typeof isEip1559Network === 'undefined') {
-                const block = await getBlock();
-                isEip1559Network = typeof block?.baseFeePerGas === 'bigint';
-                eip1559NetworkCache.set(client.uid, isEip1559Network);
-            }
-            request.type = isEip1559Network ? 'eip1559' : 'legacy';
-        }
-    }
-    if (parameters.includes('fees')) {
-        // TODO(4844): derive blob base fees once https://github.com/ethereum/execution-apis/pull/486 is merged.
-        if (request.type !== 'legacy' && request.type !== 'eip2930') {
-            // EIP-1559 fees
-            if (typeof request.maxFeePerGas === 'undefined' ||
-                typeof request.maxPriorityFeePerGas === 'undefined') {
-                const block = await getBlock();
-                const { maxFeePerGas, maxPriorityFeePerGas } = await internal_estimateFeesPerGas(client, {
-                    block: block,
-                    chain,
-                    request: request,
-                });
-                if (typeof request.maxPriorityFeePerGas === 'undefined' &&
-                    request.maxFeePerGas &&
-                    request.maxFeePerGas < maxPriorityFeePerGas)
-                    throw new MaxFeePerGasTooLowError({
-                        maxPriorityFeePerGas,
-                    });
-                request.maxPriorityFeePerGas = maxPriorityFeePerGas;
-                request.maxFeePerGas = maxFeePerGas;
-            }
-        }
-        else {
-            // Legacy fees
-            if (typeof request.maxFeePerGas !== 'undefined' ||
-                typeof request.maxPriorityFeePerGas !== 'undefined')
-                throw new Eip1559FeesNotSupportedError();
-            if (typeof request.gasPrice === 'undefined') {
-                const block = await getBlock();
-                const { gasPrice: gasPrice_ } = await internal_estimateFeesPerGas(client, {
-                    block: block,
-                    chain,
-                    request: request,
-                    type: 'legacy',
-                });
-                request.gasPrice = gasPrice_;
-            }
-        }
-    }
-    if (parameters.includes('gas') && typeof gas === 'undefined')
-        request.gas = await getAction(client, estimateGas, 'estimateGas')({
-            ...request,
-            account,
-            prepare: account?.type === 'local' ? [] : ['blobVersionedHashes'],
-        });
-    if (prepareTransactionRequest?.fn &&
-        prepareTransactionRequest.runAt?.includes('afterFillParameters'))
-        request = await prepareTransactionRequest.fn({ ...request, chain }, {
-            phase: 'afterFillParameters',
-        });
-    (0,assertRequest/* assertRequest */.c)(request);
-    delete request.parameters;
-    return request;
-}
-//# sourceMappingURL=prepareTransactionRequest.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/sendRawTransaction.js
-/**
- * Sends a **signed** transaction to the network
- *
- * - Docs: https://viem.sh/docs/actions/wallet/sendRawTransaction
- * - JSON-RPC Method: [`eth_sendRawTransaction`](https://ethereum.github.io/execution-apis/api-documentation/)
- *
- * @param client - Client to use
- * @param parameters - {@link SendRawTransactionParameters}
- * @returns The transaction hash. {@link SendRawTransactionReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { sendRawTransaction } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- *
- * const hash = await sendRawTransaction(client, {
- *   serializedTransaction: '0x02f850018203118080825208808080c080a04012522854168b27e5dc3d5839bab5e6b39e1a0ffd343901ce1622e3d64b48f1a04e00902ae0502c4728cbf12156290df99c3ed7de85b1dbfe20b5c36931733a33'
- * })
- */
-async function sendRawTransaction(client, { serializedTransaction }) {
-    return client.request({
-        method: 'eth_sendRawTransaction',
-        params: [serializedTransaction],
-    }, { retryCount: 0 });
-}
-//# sourceMappingURL=sendRawTransaction.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/sendTransaction.js
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const supportsWalletNamespace = new lru/* LruMap */.A(128);
-/**
- * Creates, signs, and sends a new transaction to the network.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/sendTransaction
- * - Examples: https://stackblitz.com/github/wevm/viem/tree/main/examples/transactions_sending-transactions
- * - JSON-RPC Methods:
- *   - JSON-RPC Accounts: [`eth_sendTransaction`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_sendtransaction)
- *   - Local Accounts: [`eth_sendRawTransaction`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_sendrawtransaction)
- *
- * @param client - Client to use
- * @param parameters - {@link SendTransactionParameters}
- * @returns The [Transaction](https://viem.sh/docs/glossary/terms#transaction) hash. {@link SendTransactionReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { sendTransaction } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const hash = await sendTransaction(client, {
- *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- *   to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
- *   value: 1000000000000000000n,
- * })
- *
- * @example
- * // Account Hoisting
- * import { createWalletClient, http } from 'viem'
- * import { privateKeyToAccount } from 'viem/accounts'
- * import { mainnet } from 'viem/chains'
- * import { sendTransaction } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   account: privateKeyToAccount('0x…'),
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const hash = await sendTransaction(client, {
- *   to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
- *   value: 1000000000000000000n,
- * })
- */
-async function sendTransaction(client, parameters) {
-    const { account: account_ = client.account, assertChainId = true, chain = client.chain, accessList, authorizationList, blobs, data, dataSuffix = typeof client.dataSuffix === 'string'
-        ? client.dataSuffix
-        : client.dataSuffix?.value, gas, gasPrice, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, nonce, type, value, ...rest } = parameters;
-    if (typeof account_ === 'undefined')
-        throw new AccountNotFoundError({
-            docsPath: '/docs/actions/wallet/sendTransaction',
-        });
-    const account = account_ ? (0,parseAccount/* parseAccount */.J)(account_) : null;
-    let nonceManagerParameters;
-    try {
-        (0,assertRequest/* assertRequest */.c)(parameters);
-        const to = await (async () => {
-            // If `to` exists on the parameters, use that.
-            if (parameters.to)
-                return parameters.to;
-            // If `to` is null, we are sending a deployment transaction.
-            if (parameters.to === null)
-                return undefined;
-            // If no `to` exists, and we are sending a EIP-7702 transaction, use the
-            // address of the first authorization in the list.
-            if (authorizationList && authorizationList.length > 0)
-                return await recoverAuthorizationAddress({
-                    authorization: authorizationList[0],
-                }).catch(() => {
-                    throw new base/* BaseError */.C('`to` is required. Could not infer from `authorizationList`.');
-                });
-            // Otherwise, we are sending a deployment transaction.
-            return undefined;
-        })();
-        if (account?.type === 'json-rpc' || account === null) {
-            let chainId;
-            if (chain !== null) {
-                chainId = await getAction(client, getChainId_getChainId, 'getChainId')({});
-                if (assertChainId)
-                    assertCurrentChain({
-                        currentChainId: chainId,
-                        chain,
-                    });
-            }
-            const chainFormat = client.chain?.formatters?.transactionRequest?.format;
-            const format = chainFormat || transactionRequest/* formatTransactionRequest */.Bv;
-            const request = format({
-                // Pick out extra data that might exist on the chain's transaction request type.
-                ...(0,extract/* extract */.o)(rest, { format: chainFormat }),
-                accessList,
-                account,
-                authorizationList,
-                blobs,
-                chainId,
-                data: dataSuffix ? (0,concat/* concat */.xW)([data ?? '0x', dataSuffix]) : data,
-                gas,
-                gasPrice,
-                maxFeePerBlobGas,
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-                nonce,
-                to,
-                type,
-                value,
-            }, 'sendTransaction');
-            const isWalletNamespaceSupported = supportsWalletNamespace.get(client.uid);
-            const method = isWalletNamespaceSupported
-                ? 'wallet_sendTransaction'
-                : 'eth_sendTransaction';
-            try {
-                return await client.request({
-                    method,
-                    params: [request],
-                }, { retryCount: 0 });
-            }
-            catch (e) {
-                if (isWalletNamespaceSupported === false)
-                    throw e;
-                const error = e;
-                // If the transport does not support the method or input, attempt to use the
-                // `wallet_sendTransaction` method.
-                if (error.name === 'InvalidInputRpcError' ||
-                    error.name === 'InvalidParamsRpcError' ||
-                    error.name === 'MethodNotFoundRpcError' ||
-                    error.name === 'MethodNotSupportedRpcError') {
-                    return await client
-                        .request({
-                        method: 'wallet_sendTransaction',
-                        params: [request],
-                    }, { retryCount: 0 })
-                        .then((hash) => {
-                        supportsWalletNamespace.set(client.uid, true);
-                        return hash;
-                    })
-                        .catch((e) => {
-                        const walletNamespaceError = e;
-                        if (walletNamespaceError.name === 'MethodNotFoundRpcError' ||
-                            walletNamespaceError.name === 'MethodNotSupportedRpcError') {
-                            supportsWalletNamespace.set(client.uid, false);
-                            throw error;
-                        }
-                        throw walletNamespaceError;
-                    });
-                }
-                throw error;
-            }
-        }
-        if (account?.type === 'local') {
-            if (account.nonceManager && typeof nonce === 'undefined') {
-                const requestChainId = rest.chainId;
-                const chainId = await (async () => {
-                    if (typeof requestChainId === 'number')
-                        return requestChainId;
-                    if (chain)
-                        return chain.id;
-                    return getAction(client, getChainId_getChainId, 'getChainId')({});
-                })();
-                nonceManagerParameters = { address: account.address, chainId };
-            }
-            // Prepare the request for signing (assign appropriate fees, etc.)
-            const request = await getAction(client, prepareTransactionRequest, 'prepareTransactionRequest')({
-                account,
-                accessList,
-                authorizationList,
-                blobs,
-                chain,
-                data: dataSuffix ? (0,concat/* concat */.xW)([data ?? '0x', dataSuffix]) : data,
-                gas,
-                gasPrice,
-                maxFeePerBlobGas,
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-                nonce,
-                nonceManager: account.nonceManager,
-                parameters: [...defaultParameters, 'sidecars'],
-                type,
-                value,
-                ...rest,
-                to,
-            });
-            const serializer = chain?.serializers?.transaction;
-            const serializedTransaction = (await account.signTransaction(request, {
-                serializer,
-            }));
-            return await getAction(client, sendRawTransaction, 'sendRawTransaction')({
-                serializedTransaction,
-            });
-        }
-        if (account?.type === 'smart')
-            throw new AccountTypeNotSupportedError({
-                metaMessages: [
-                    'Consider using the `sendUserOperation` Action instead.',
-                ],
-                docsPath: '/docs/actions/bundler/sendUserOperation',
-                type: 'smart',
-            });
-        throw new AccountTypeNotSupportedError({
-            docsPath: '/docs/actions/wallet/sendTransaction',
-            type: account?.type,
-        });
-    }
-    catch (err) {
-        if (err instanceof AccountTypeNotSupportedError)
-            throw err;
-        if (nonceManagerParameters)
-            account?.nonceManager?.reset(nonceManagerParameters);
-        throw getTransactionError(err, {
-            ...parameters,
-            account,
-            chain: parameters.chain || undefined,
-        });
-    }
-}
-//# sourceMappingURL=sendTransaction.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/deployContract.js
-
-
-/**
- * Deploys a contract to the network, given bytecode and constructor arguments.
- *
- * - Docs: https://viem.sh/docs/contract/deployContract
- * - Examples: https://stackblitz.com/github/wevm/viem/tree/main/examples/contracts_deploying-contracts
- *
- * @param client - Client to use
- * @param parameters - {@link DeployContractParameters}
- * @returns The [Transaction](https://viem.sh/docs/glossary/terms#transaction) hash. {@link DeployContractReturnType}
- *
- * @example
- * import { createWalletClient, http } from 'viem'
- * import { privateKeyToAccount } from 'viem/accounts'
- * import { mainnet } from 'viem/chains'
- * import { deployContract } from 'viem/contract'
- *
- * const client = createWalletClient({
- *   account: privateKeyToAccount('0x…'),
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const hash = await deployContract(client, {
- *   abi: [],
- *   account: '0x…,
- *   bytecode: '0x608060405260405161083e38038061083e833981016040819052610...',
- * })
- */
-function deployContract(walletClient, parameters) {
-    const { abi, args, bytecode, ...request } = parameters;
-    const calldata = (0,encodeDeployData/* encodeDeployData */.m)({ abi, args, bytecode });
-    return sendTransaction(walletClient, {
-        ...request,
-        ...(request.authorizationList ? { to: null } : {}),
-        data: calldata,
-    });
-}
-//# sourceMappingURL=deployContract.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/getAddresses.js
-
-/**
- * Returns a list of account addresses owned by the wallet or client.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/getAddresses
- * - JSON-RPC Methods: [`eth_accounts`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_accounts)
- *
- * @param client - Client to use
- * @returns List of account addresses owned by the wallet or client. {@link GetAddressesReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { getAddresses } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const accounts = await getAddresses(client)
- */
-async function getAddresses(client) {
-    if (client.account?.type === 'local')
-        return [client.account.address];
-    const addresses = await client.request({ method: 'eth_accounts' }, { dedupe: true });
-    return addresses.map((address) => (0,getAddress/* checksumAddress */.o)(address));
-}
-//# sourceMappingURL=getAddresses.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/data/slice.js
-var slice = __nccwpck_require__(6018);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/data/trim.js
-var trim = __nccwpck_require__(4146);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/formatters/log.js
-function formatLog(log, { args, eventName, } = {}) {
-    return {
-        ...log,
-        blockHash: log.blockHash ? log.blockHash : null,
-        blockNumber: log.blockNumber ? BigInt(log.blockNumber) : null,
-        blockTimestamp: log.blockTimestamp
-            ? BigInt(log.blockTimestamp)
-            : log.blockTimestamp === null
-                ? null
-                : undefined,
-        logIndex: log.logIndex ? Number(log.logIndex) : null,
-        transactionHash: log.transactionHash ? log.transactionHash : null,
-        transactionIndex: log.transactionIndex
-            ? Number(log.transactionIndex)
-            : null,
-        ...(eventName ? { args, eventName } : {}),
-    };
-}
-//# sourceMappingURL=log.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/formatters/transactionReceipt.js
-
-
-
-
-const receiptStatuses = {
-    '0x0': 'reverted',
-    '0x1': 'success',
-};
-function formatTransactionReceipt(transactionReceipt, _) {
-    const receipt = {
-        ...transactionReceipt,
-        blockNumber: transactionReceipt.blockNumber
-            ? BigInt(transactionReceipt.blockNumber)
-            : null,
-        contractAddress: transactionReceipt.contractAddress
-            ? transactionReceipt.contractAddress
-            : null,
-        cumulativeGasUsed: transactionReceipt.cumulativeGasUsed
-            ? BigInt(transactionReceipt.cumulativeGasUsed)
-            : null,
-        effectiveGasPrice: transactionReceipt.effectiveGasPrice
-            ? BigInt(transactionReceipt.effectiveGasPrice)
-            : null,
-        gasUsed: transactionReceipt.gasUsed
-            ? BigInt(transactionReceipt.gasUsed)
-            : null,
-        logs: transactionReceipt.logs
-            ? transactionReceipt.logs.map((log) => formatLog(log))
-            : null,
-        to: transactionReceipt.to ? transactionReceipt.to : null,
-        transactionIndex: transactionReceipt.transactionIndex
-            ? (0,fromHex/* hexToNumber */.ME)(transactionReceipt.transactionIndex)
-            : null,
-        status: transactionReceipt.status
-            ? receiptStatuses[transactionReceipt.status]
-            : null,
-        type: transactionReceipt.type
-            ? transactionType[transactionReceipt.type] || transactionReceipt.type
-            : null,
-    };
-    if (transactionReceipt.blobGasPrice)
-        receipt.blobGasPrice = BigInt(transactionReceipt.blobGasPrice);
-    if (transactionReceipt.blobGasUsed)
-        receipt.blobGasUsed = BigInt(transactionReceipt.blobGasUsed);
-    return receipt;
-}
-const defineTransactionReceipt = /*#__PURE__*/ defineFormatter('transactionReceipt', formatTransactionReceipt);
-//# sourceMappingURL=transactionReceipt.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/abi/encodeFunctionData.js + 1 modules
-var encodeFunctionData = __nccwpck_require__(3955);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/sendCalls.js
-
-
-
-
-
-
-
-
-
-const fallbackMagicIdentifier = '0x5792579257925792579257925792579257925792579257925792579257925792';
-const fallbackTransactionErrorMagicIdentifier = (0,toHex/* numberToHex */.cK)(0, {
-    size: 32,
-});
-/**
- * Requests the connected wallet to send a batch of calls.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/sendCalls
- * - JSON-RPC Methods: [`wallet_sendCalls`](https://eips.ethereum.org/EIPS/eip-5792)
- *
- * @param client - Client to use
- * @returns Transaction identifier. {@link SendCallsReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { sendCalls } from 'viem/actions'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const id = await sendCalls(client, {
- *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- *   calls: [
- *     {
- *       data: '0xdeadbeef',
- *       to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
- *     },
- *     {
- *       to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
- *       value: 69420n,
- *     },
- *   ],
- * })
- */
-async function sendCalls(client, parameters) {
-    const { account: account_ = client.account, chain = client.chain, experimental_fallback, experimental_fallbackDelay = 32, forceAtomic = false, id, version = '2.0.0', } = parameters;
-    const account = account_ ? (0,parseAccount/* parseAccount */.J)(account_) : null;
-    let capabilities = parameters.capabilities;
-    if (client.dataSuffix && !parameters.capabilities?.dataSuffix) {
-        if (typeof client.dataSuffix === 'string')
-            capabilities = {
-                ...parameters.capabilities,
-                dataSuffix: { value: client.dataSuffix, optional: true },
-            };
-        else
-            capabilities = {
-                ...parameters.capabilities,
-                dataSuffix: {
-                    value: client.dataSuffix.value,
-                    ...(client.dataSuffix.required ? {} : { optional: true }),
-                },
-            };
-    }
-    const calls = parameters.calls.map((call_) => {
-        const call = call_;
-        const data = call.abi
-            ? (0,encodeFunctionData/* encodeFunctionData */.p)({
-                abi: call.abi,
-                functionName: call.functionName,
-                args: call.args,
-            })
-            : call.data;
-        return {
-            data: call.dataSuffix && data ? (0,concat/* concat */.xW)([data, call.dataSuffix]) : data,
-            to: call.to,
-            value: call.value ? (0,toHex/* numberToHex */.cK)(call.value) : undefined,
-        };
-    });
-    try {
-        const response = await client.request({
-            method: 'wallet_sendCalls',
-            params: [
-                {
-                    atomicRequired: forceAtomic,
-                    calls,
-                    capabilities,
-                    chainId: (0,toHex/* numberToHex */.cK)(chain.id),
-                    from: account?.address,
-                    id,
-                    version,
-                },
-            ],
-        }, { retryCount: 0 });
-        if (typeof response === 'string')
-            return { id: response };
-        return response;
-    }
-    catch (err) {
-        const error = err;
-        // If the transport does not support EIP-5792, fall back to
-        // `eth_sendTransaction`.
-        if (experimental_fallback &&
-            (error.name === 'MethodNotFoundRpcError' ||
-                error.name === 'MethodNotSupportedRpcError' ||
-                error.name === 'UnknownRpcError' ||
-                error.details
-                    .toLowerCase()
-                    .includes('does not exist / is not available') ||
-                error.details.toLowerCase().includes('missing or invalid. request()') ||
-                error.details
-                    .toLowerCase()
-                    .includes('did not match any variant of untagged enum') ||
-                error.details
-                    .toLowerCase()
-                    .includes('account upgraded to unsupported contract') ||
-                error.details.toLowerCase().includes('eip-7702 not supported') ||
-                error.details.toLowerCase().includes('unsupported wc_ method') ||
-                // magic.link
-                error.details
-                    .toLowerCase()
-                    .includes('feature toggled misconfigured') ||
-                // Trust Wallet
-                error.details
-                    .toLowerCase()
-                    .includes('jsonrpcengine: response has no error or result for request'))) {
-            if (capabilities) {
-                const hasNonOptionalCapability = Object.values(capabilities).some((capability) => !capability.optional);
-                if (hasNonOptionalCapability) {
-                    const message = 'non-optional `capabilities` are not supported on fallback to `eth_sendTransaction`.';
-                    throw new UnsupportedNonOptionalCapabilityError(new base/* BaseError */.C(message, {
-                        details: message,
-                    }));
-                }
-            }
-            if (forceAtomic && calls.length > 1) {
-                const message = '`forceAtomic` is not supported on fallback to `eth_sendTransaction`.';
-                throw new AtomicityNotSupportedError(new base/* BaseError */.C(message, {
-                    details: message,
-                }));
-            }
-            const promises = [];
-            for (const call of calls) {
-                const promise = sendTransaction(client, {
-                    account,
-                    chain,
-                    data: call.data,
-                    to: call.to,
-                    value: call.value ? (0,fromHex/* hexToBigInt */.uU)(call.value) : undefined,
-                });
-                promises.push(promise);
-                // Note: some browser wallets require a small delay between transactions
-                // to prevent duplicate JSON-RPC requests.
-                if (experimental_fallbackDelay > 0)
-                    await new Promise((resolve) => setTimeout(resolve, experimental_fallbackDelay));
-            }
-            const results = await Promise.allSettled(promises);
-            if (results.every((r) => r.status === 'rejected'))
-                throw results[0].reason;
-            const hashes = results.map((result) => {
-                if (result.status === 'fulfilled')
-                    return result.value;
-                return fallbackTransactionErrorMagicIdentifier;
-            });
-            return {
-                id: (0,concat/* concat */.xW)([
-                    ...hashes,
-                    (0,toHex/* numberToHex */.cK)(chain.id, { size: 32 }),
-                    fallbackMagicIdentifier,
-                ]),
-            };
-        }
-        throw getTransactionError(err, {
-            ...parameters,
-            account,
-            chain: parameters.chain,
-        });
-    }
-}
-//# sourceMappingURL=sendCalls.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/getCallsStatus.js
-
-
-
-
-
-/**
- * Returns the status of a call batch that was sent via `sendCalls`.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/getCallsStatus
- * - JSON-RPC Methods: [`wallet_getCallsStatus`](https://eips.ethereum.org/EIPS/eip-5792)
- *
- * @param client - Client to use
- * @returns Status of the calls. {@link GetCallsStatusReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { getCallsStatus } from 'viem/actions'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const { receipts, status } = await getCallsStatus(client, { id: '0xdeadbeef' })
- */
-async function getCallsStatus(client, parameters) {
-    async function getStatus(id) {
-        const isTransactions = id.endsWith(fallbackMagicIdentifier.slice(2));
-        if (isTransactions) {
-            const chainId = (0,trim/* trim */.B)((0,slice/* sliceHex */.iN)(id, -64, -32));
-            const hashes = (0,slice/* sliceHex */.iN)(id, 0, -64)
-                .slice(2)
-                .match(/.{1,64}/g);
-            const receipts = await Promise.all(hashes.map((hash) => fallbackTransactionErrorMagicIdentifier.slice(2) !== hash
-                ? client.request({
-                    method: 'eth_getTransactionReceipt',
-                    params: [`0x${hash}`],
-                }, { dedupe: true })
-                : undefined));
-            const status = (() => {
-                if (receipts.some((r) => r === null))
-                    return 100; // pending
-                if (receipts.every((r) => r?.status === '0x1'))
-                    return 200; // success
-                if (receipts.every((r) => r?.status === '0x0'))
-                    return 500; // complete failure
-                return 600; // partial failure
-            })();
-            return {
-                atomic: false,
-                chainId: (0,fromHex/* hexToNumber */.ME)(chainId),
-                receipts: receipts.filter(Boolean),
-                status,
-                version: '2.0.0',
-            };
-        }
-        return client.request({
-            method: 'wallet_getCallsStatus',
-            params: [id],
-        });
-    }
-    const { atomic = false, chainId, receipts, version = '2.0.0', ...response } = await getStatus(parameters.id);
-    const [status, statusCode] = (() => {
-        const statusCode = response.status;
-        if (statusCode >= 100 && statusCode < 200)
-            return ['pending', statusCode];
-        if (statusCode >= 200 && statusCode < 300)
-            return ['success', statusCode];
-        if (statusCode >= 300 && statusCode < 700)
-            return ['failure', statusCode];
-        // @ts-expect-error: for backwards compatibility
-        if (statusCode === 'CONFIRMED')
-            return ['success', 200];
-        // @ts-expect-error: for backwards compatibility
-        if (statusCode === 'PENDING')
-            return ['pending', 100];
-        return [undefined, statusCode];
-    })();
-    return {
-        ...response,
-        atomic,
-        // @ts-expect-error: for backwards compatibility
-        chainId: chainId ? (0,fromHex/* hexToNumber */.ME)(chainId) : undefined,
-        receipts: receipts?.map((receipt) => ({
-            ...receipt,
-            blockNumber: (0,fromHex/* hexToBigInt */.uU)(receipt.blockNumber),
-            gasUsed: (0,fromHex/* hexToBigInt */.uU)(receipt.gasUsed),
-            status: receiptStatuses[receipt.status],
-        })) ?? [],
-        statusCode,
-        status,
-        version,
-    };
-}
-//# sourceMappingURL=getCallsStatus.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/getCapabilities.js
-
-
-/**
- * Extract capabilities that a connected wallet supports (e.g. paymasters, session keys, etc).
- *
- * - Docs: https://viem.sh/docs/actions/wallet/getCapabilities
- * - JSON-RPC Methods: [`wallet_getCapabilities`](https://eips.ethereum.org/EIPS/eip-5792)
- *
- * @param client - Client to use
- * @returns The wallet's capabilities. {@link GetCapabilitiesReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { getCapabilities } from 'viem/actions'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const capabilities = await getCapabilities(client)
- */
-async function getCapabilities(client, parameters = {}) {
-    const { account = client.account, chainId } = parameters;
-    const account_ = account ? (0,parseAccount/* parseAccount */.J)(account) : undefined;
-    const params = chainId
-        ? [account_?.address, [(0,toHex/* numberToHex */.cK)(chainId)]]
-        : [account_?.address];
-    const capabilities_raw = await client.request({
-        method: 'wallet_getCapabilities',
-        params,
-    });
-    const capabilities = {};
-    for (const [chainId, capabilities_] of Object.entries(capabilities_raw)) {
-        capabilities[Number(chainId)] = {};
-        for (let [key, value] of Object.entries(capabilities_)) {
-            if (key === 'addSubAccount')
-                key = 'unstable_addSubAccount';
-            capabilities[Number(chainId)][key] = value;
-        }
-    }
-    return (typeof chainId === 'number' ? capabilities[chainId] : capabilities);
-}
-//# sourceMappingURL=getCapabilities.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/getPermissions.js
-/**
- * Gets the wallets current permissions.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/getPermissions
- * - JSON-RPC Methods: [`wallet_getPermissions`](https://eips.ethereum.org/EIPS/eip-2255)
- *
- * @param client - Client to use
- * @returns The wallet permissions. {@link GetPermissionsReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { getPermissions } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const permissions = await getPermissions(client)
- */
-async function getPermissions(client) {
-    const permissions = await client.request({ method: 'wallet_getPermissions' }, { dedupe: true });
-    return permissions;
-}
-//# sourceMappingURL=getPermissions.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/address/isAddressEqual.js
-var isAddressEqual = __nccwpck_require__(2538);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/prepareAuthorization.js
-
-
-
-
-
-
-/**
- * Prepares an [EIP-7702 Authorization](https://eips.ethereum.org/EIPS/eip-7702) object for signing.
- * This Action will fill the required fields of the Authorization object if they are not provided (e.g. `nonce` and `chainId`).
- *
- * With the prepared Authorization object, you can use [`signAuthorization`](https://viem.sh/docs/eip7702/signAuthorization) to sign over the Authorization object.
- *
- * @param client - Client to use
- * @param parameters - {@link PrepareAuthorizationParameters}
- * @returns The prepared Authorization object. {@link PrepareAuthorizationReturnType}
- *
- * @example
- * import { createClient, http } from 'viem'
- * import { privateKeyToAccount } from 'viem/accounts'
- * import { mainnet } from 'viem/chains'
- * import { prepareAuthorization } from 'viem/experimental'
- *
- * const client = createClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const authorization = await prepareAuthorization(client, {
- *   account: privateKeyToAccount('0x..'),
- *   contractAddress: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- * })
- *
- * @example
- * // Account Hoisting
- * import { createClient, http } from 'viem'
- * import { privateKeyToAccount } from 'viem/accounts'
- * import { mainnet } from 'viem/chains'
- * import { prepareAuthorization } from 'viem/experimental'
- *
- * const client = createClient({
- *   account: privateKeyToAccount('0x…'),
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const authorization = await prepareAuthorization(client, {
- *   contractAddress: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- * })
- */
-async function prepareAuthorization(client, parameters) {
-    const { account: account_ = client.account, chainId, nonce } = parameters;
-    if (!account_)
-        throw new AccountNotFoundError({
-            docsPath: '/docs/eip7702/prepareAuthorization',
-        });
-    const account = (0,parseAccount/* parseAccount */.J)(account_);
-    const executor = (() => {
-        if (!parameters.executor)
-            return undefined;
-        if (parameters.executor === 'self')
-            return parameters.executor;
-        return (0,parseAccount/* parseAccount */.J)(parameters.executor);
-    })();
-    const authorization = {
-        address: parameters.contractAddress ?? parameters.address,
-        chainId,
-        nonce,
-    };
-    if (typeof authorization.chainId === 'undefined')
-        authorization.chainId =
-            client.chain?.id ??
-                (await getAction(client, getChainId_getChainId, 'getChainId')({}));
-    if (typeof authorization.nonce === 'undefined') {
-        authorization.nonce = await getAction(client, getTransactionCount, 'getTransactionCount')({
-            address: account.address,
-            blockTag: 'pending',
-        });
-        if (executor === 'self' ||
-            (executor?.address && (0,isAddressEqual/* isAddressEqual */.h)(executor.address, account.address)))
-            authorization.nonce += 1;
-    }
-    return authorization;
-}
-//# sourceMappingURL=prepareAuthorization.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/requestAddresses.js
-
-/**
- * Requests a list of accounts managed by a wallet.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/requestAddresses
- * - JSON-RPC Methods: [`eth_requestAccounts`](https://eips.ethereum.org/EIPS/eip-1102)
- *
- * Sends a request to the wallet, asking for permission to access the user's accounts. After the user accepts the request, it will return a list of accounts (addresses).
- *
- * This API can be useful for dapps that need to access the user's accounts in order to execute transactions or interact with smart contracts.
- *
- * @param client - Client to use
- * @returns List of accounts managed by a wallet {@link RequestAddressesReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { requestAddresses } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const accounts = await requestAddresses(client)
- */
-async function requestAddresses(client) {
-    const addresses = await client.request({ method: 'eth_requestAccounts' }, { dedupe: true, retryCount: 0 });
-    return addresses.map((address) => (0,getAddress/* getAddress */.b)(address));
-}
-//# sourceMappingURL=requestAddresses.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/requestPermissions.js
-/**
- * Requests permissions for a wallet.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/requestPermissions
- * - JSON-RPC Methods: [`wallet_requestPermissions`](https://eips.ethereum.org/EIPS/eip-2255)
- *
- * @param client - Client to use
- * @param parameters - {@link RequestPermissionsParameters}
- * @returns The wallet permissions. {@link RequestPermissionsReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { requestPermissions } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const permissions = await requestPermissions(client, {
- *   eth_accounts: {}
- * })
- */
-async function requestPermissions(client, permissions) {
-    return client.request({
-        method: 'wallet_requestPermissions',
-        params: [permissions],
-    }, { retryCount: 0 });
-}
-//# sourceMappingURL=requestPermissions.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/calls.js
-
-class BundleFailedError extends base/* BaseError */.C {
-    constructor(result) {
-        super(`Call bundle failed with status: ${result.statusCode}`, {
-            name: 'BundleFailedError',
-        });
-        Object.defineProperty(this, "result", {
-            enumerable: true,
-            configurable: true,
-            writable: true,
-            value: void 0
-        });
-        this.result = result;
-    }
-}
-//# sourceMappingURL=calls.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/observe.js
-/** @internal */
-const listenersCache = /*#__PURE__*/ new Map();
-/** @internal */
-const cleanupCache = /*#__PURE__*/ new Map();
-let callbackCount = 0;
-/**
- * @description Sets up an observer for a given function. If another function
- * is set up under the same observer id, the function will only be called once
- * for both instances of the observer.
- */
-function observe(observerId, callbacks, fn) {
-    const callbackId = ++callbackCount;
-    const getListeners = () => listenersCache.get(observerId) || [];
-    const unsubscribe = () => {
-        const listeners = getListeners();
-        const nextListeners = listeners.filter((cb) => cb.id !== callbackId);
-        if (nextListeners.length === 0) {
-            listenersCache.delete(observerId);
-            cleanupCache.delete(observerId);
-            return;
-        }
-        listenersCache.set(observerId, nextListeners);
-    };
-    const unwatch = () => {
-        const listeners = getListeners();
-        if (!listeners.some((cb) => cb.id === callbackId))
-            return;
-        const cleanup = cleanupCache.get(observerId);
-        if (listeners.length === 1 && cleanup) {
-            const p = cleanup();
-            if (p instanceof Promise)
-                p.catch(() => { });
-        }
-        unsubscribe();
-    };
-    const listeners = getListeners();
-    listenersCache.set(observerId, [
-        ...listeners,
-        { id: callbackId, fns: callbacks },
-    ]);
-    if (listeners && listeners.length > 0)
-        return unwatch;
-    const emit = {};
-    for (const key in callbacks) {
-        emit[key] = ((...args) => {
-            const listeners = getListeners();
-            if (listeners.length === 0)
-                return;
-            for (const listener of listeners)
-                listener.fns[key]?.(...args);
-        });
-    }
-    const cleanup = fn(emit);
-    if (typeof cleanup === 'function')
-        cleanupCache.set(observerId, cleanup);
-    return unwatch;
-}
-//# sourceMappingURL=observe.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/poll.js
-
-/**
- * @description Polls a function at a specified interval.
- */
-function poll(fn, { emitOnBegin, initialWaitTime, interval }) {
-    let active = true;
-    const unwatch = () => (active = false);
-    const watch = async () => {
-        let data;
-        if (emitOnBegin)
-            data = await fn({ unpoll: unwatch });
-        const initialWait = (await initialWaitTime?.(data)) ?? interval;
-        await wait(initialWait);
-        const poll = async () => {
-            if (!active)
-                return;
-            await fn({ unpoll: unwatch });
-            await wait(interval);
-            poll();
-        };
-        poll();
-    };
-    watch();
-    return unwatch;
-}
-//# sourceMappingURL=poll.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/promise/withResolvers.js
-var withResolvers = __nccwpck_require__(1078);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/waitForCallsStatus.js
-
-
-
-
-
-
-
-
-
-/**
- * Waits for the status & receipts of a call bundle that was sent via `sendCalls`.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/waitForCallsStatus
- * - JSON-RPC Methods: [`wallet_getCallsStatus`](https://eips.ethereum.org/EIPS/eip-5792)
- *
- * @param client - Client to use
- * @param parameters - {@link WaitForCallsStatusParameters}
- * @returns Status & receipts of the call bundle. {@link WaitForCallsStatusReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { waitForCallsStatus } from 'viem/actions'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- *
- * const { receipts, status } = await waitForCallsStatus(client, { id: '0xdeadbeef' })
- */
-async function waitForCallsStatus(client, parameters) {
-    const { id, pollingInterval = client.pollingInterval, status = ({ statusCode }) => statusCode === 200 || statusCode >= 300, retryCount = 4, retryDelay = ({ count }) => ~~(1 << count) * 200, // exponential backoff
-    timeout = 60_000, throwOnFailure = false, } = parameters;
-    const observerId = (0,stringify/* stringify */.A)(['waitForCallsStatus', client.uid, id]);
-    const { promise, resolve, reject } = (0,withResolvers/* withResolvers */.Y)();
-    let timer;
-    const unobserve = observe(observerId, { resolve, reject }, (emit) => {
-        const unpoll = poll(async () => {
-            const done = (fn) => {
-                clearTimeout(timer);
-                unpoll();
-                fn();
-                unobserve();
-            };
-            try {
-                const result = await withRetry(async () => {
-                    const result = await getAction(client, getCallsStatus, 'getCallsStatus')({ id });
-                    if (throwOnFailure && result.status === 'failure')
-                        throw new BundleFailedError(result);
-                    return result;
-                }, {
-                    retryCount,
-                    delay: retryDelay,
-                });
-                if (!status(result))
-                    return;
-                done(() => emit.resolve(result));
-            }
-            catch (error) {
-                done(() => emit.reject(error));
-            }
-        }, {
-            interval: pollingInterval,
-            emitOnBegin: true,
-        });
-        return unpoll;
-    });
-    timer = timeout
-        ? setTimeout(() => {
-            unobserve();
-            clearTimeout(timer);
-            reject(new WaitForCallsStatusTimeoutError({ id }));
-        }, timeout)
-        : undefined;
-    return await promise;
-}
-class WaitForCallsStatusTimeoutError extends base/* BaseError */.C {
-    constructor({ id }) {
-        super(`Timed out while waiting for call bundle with id "${id}" to be confirmed.`, { name: 'WaitForCallsStatusTimeoutError' });
-    }
-}
-//# sourceMappingURL=waitForCallsStatus.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/sendCallsSync.js
-
-
-
-/**
- * Requests the connected wallet to send a batch of calls, and waits for the calls to be included in a block.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/sendCallsSync
- * - JSON-RPC Methods: [`wallet_sendCalls`](https://eips.ethereum.org/EIPS/eip-5792)
- *
- * @param client - Client to use
- * @returns Calls status. {@link SendCallsSyncReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { sendCalls } from 'viem/actions'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const status = await sendCallsSync(client, {
- *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- *   calls: [
- *     {
- *       data: '0xdeadbeef',
- *       to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
- *     },
- *     {
- *       to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
- *       value: 69420n,
- *     },
- *   ],
- * })
- */
-async function sendCallsSync(client, parameters) {
-    const { chain = client.chain } = parameters;
-    const timeout = parameters.timeout ?? Math.max((chain?.blockTime ?? 0) * 3, 5_000);
-    const result = await getAction(client, sendCalls, 'sendCalls')(parameters);
-    const status = await getAction(client, waitForCallsStatus, 'waitForCallsStatus')({
-        ...parameters,
-        id: result.id,
-        timeout,
-    });
-    return status;
-}
-//# sourceMappingURL=sendCallsSync.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/sendRawTransactionSync.js
-
-
-/**
- * Sends a **signed** transaction to the network synchronously,
- * and waits for the transaction to be included in a block.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/sendRawTransactionSync
- * - JSON-RPC Method: [`eth_sendRawTransactionSync`](https://eips.ethereum.org/EIPS/eip-7966)
- *
- * @param client - Client to use
- * @param parameters - {@link SendRawTransactionParameters}
- * @returns The transaction receipt. {@link SendRawTransactionSyncReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { sendRawTransactionSync } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- *
- * const receipt = await sendRawTransactionSync(client, {
- *   serializedTransaction: '0x02f850018203118080825208808080c080a04012522854168b27e5dc3d5839bab5e6b39e1a0ffd343901ce1622e3d64b48f1a04e00902ae0502c4728cbf12156290df99c3ed7de85b1dbfe20b5c36931733a33'
- * })
- */
-async function sendRawTransactionSync(client, { serializedTransaction, throwOnReceiptRevert, timeout, }) {
-    const receipt = await client.request({
-        method: 'eth_sendRawTransactionSync',
-        params: timeout
-            ? [serializedTransaction, timeout]
-            : [serializedTransaction],
-    }, { retryCount: 0 });
-    const format = client.chain?.formatters?.transactionReceipt?.format ||
-        formatTransactionReceipt;
-    const formatted = format(receipt);
-    if (formatted.status === 'reverted' && throwOnReceiptRevert)
-        throw new errors_transaction/* TransactionReceiptRevertedError */.Sq({ receipt: formatted });
-    return formatted;
-}
-//# sourceMappingURL=sendRawTransactionSync.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getTransaction.js
-
-
-
-/**
- * Returns information about a [Transaction](https://viem.sh/docs/glossary/terms#transaction) given a hash or block identifier.
- *
- * - Docs: https://viem.sh/docs/actions/public/getTransaction
- * - Example: https://stackblitz.com/github/wevm/viem/tree/main/examples/transactions_fetching-transactions
- * - JSON-RPC Methods: [`eth_getTransactionByHash`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getTransactionByHash)
- *
- * @param client - Client to use
- * @param parameters - {@link GetTransactionParameters}
- * @returns The transaction information. {@link GetTransactionReturnType}
- *
- * @example
- * import { createPublicClient, http } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { getTransaction } from 'viem/public'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const transaction = await getTransaction(client, {
- *   hash: '0x4ca7ee652d57678f26e887c149ab0735f41de37bcad58c9f6d3ed5824f15b74d',
- * })
- */
-async function getTransaction(client, { blockHash, blockNumber, blockTag: blockTag_, hash, index, sender, nonce, }) {
-    const blockTag = blockTag_ || 'latest';
-    const blockNumberHex = blockNumber !== undefined ? (0,toHex/* numberToHex */.cK)(blockNumber) : undefined;
-    let transaction = null;
-    if (hash) {
-        transaction = await client.request({
-            method: 'eth_getTransactionByHash',
-            params: [hash],
-        }, { dedupe: true });
-    }
-    else if (blockHash) {
-        transaction = await client.request({
-            method: 'eth_getTransactionByBlockHashAndIndex',
-            params: [blockHash, (0,toHex/* numberToHex */.cK)(index)],
-        }, { dedupe: true });
-    }
-    else if ((blockNumberHex || blockTag) && typeof index === 'number') {
-        transaction = await client.request({
-            method: 'eth_getTransactionByBlockNumberAndIndex',
-            params: [blockNumberHex || blockTag, (0,toHex/* numberToHex */.cK)(index)],
-        }, { dedupe: Boolean(blockNumberHex) });
-    }
-    else if (sender && typeof nonce === 'number') {
-        transaction = await client.request({
-            method: 'eth_getTransactionBySenderAndNonce',
-            params: [sender, (0,toHex/* numberToHex */.cK)(nonce)],
-        }, { dedupe: true });
-    }
-    if (!transaction)
-        throw new errors_transaction/* TransactionNotFoundError */.Kz({
-            blockHash,
-            blockNumber,
-            blockTag,
-            hash,
-            index,
-        });
-    const format = client.chain?.formatters?.transaction?.format || formatTransaction;
-    return format(transaction, 'getTransaction');
-}
-//# sourceMappingURL=getTransaction.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getTransactionReceipt.js
-
-
-/**
- * Returns the [Transaction Receipt](https://viem.sh/docs/glossary/terms#transaction-receipt) given a [Transaction](https://viem.sh/docs/glossary/terms#transaction) hash.
- *
- * - Docs: https://viem.sh/docs/actions/public/getTransactionReceipt
- * - Example: https://stackblitz.com/github/wevm/viem/tree/main/examples/transactions_fetching-transactions
- * - JSON-RPC Methods: [`eth_getTransactionReceipt`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_gettransactionreceipt)
- *
- * @param client - Client to use
- * @param parameters - {@link GetTransactionReceiptParameters}
- * @returns The transaction receipt. {@link GetTransactionReceiptReturnType}
- *
- * @example
- * import { createPublicClient, http } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { getTransactionReceipt } from 'viem/public'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const transactionReceipt = await getTransactionReceipt(client, {
- *   hash: '0x4ca7ee652d57678f26e887c149ab0735f41de37bcad58c9f6d3ed5824f15b74d',
- * })
- */
-async function getTransactionReceipt(client, { hash }) {
-    const receipt = await client.request({
-        method: 'eth_getTransactionReceipt',
-        params: [hash],
-    }, { dedupe: true });
-    if (!receipt)
-        throw new errors_transaction/* TransactionReceiptNotFoundError */.Kc({ hash });
-    const format = client.chain?.formatters?.transactionReceipt?.format ||
-        formatTransactionReceipt;
-    return format(receipt, 'getTransactionReceipt');
-}
-//# sourceMappingURL=getTransactionReceipt.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/promise/withCache.js
-/** @internal */
-const withCache_promiseCache = /*#__PURE__*/ new Map();
-/** @internal */
-const responseCache = /*#__PURE__*/ new Map();
-function withCache_getCache(cacheKey) {
-    const buildCache = (cacheKey, cache) => ({
-        clear: () => cache.delete(cacheKey),
-        get: () => cache.get(cacheKey),
-        set: (data) => cache.set(cacheKey, data),
-    });
-    const promise = buildCache(cacheKey, withCache_promiseCache);
-    const response = buildCache(cacheKey, responseCache);
-    return {
-        clear: () => {
-            promise.clear();
-            response.clear();
-        },
-        promise,
-        response,
-    };
-}
-/**
- * @description Returns the result of a given promise, and caches the result for
- * subsequent invocations against a provided cache key.
- */
-async function withCache(fn, { cacheKey, cacheTime = Number.POSITIVE_INFINITY }) {
-    const cache = withCache_getCache(cacheKey);
-    // If a response exists in the cache, and it's not expired, return it
-    // and do not invoke the promise.
-    // If the max age is 0, the cache is disabled.
-    const response = cache.response.get();
-    if (response && cacheTime > 0) {
-        const age = Date.now() - response.created.getTime();
-        if (age < cacheTime)
-            return response.data;
-    }
-    let promise = cache.promise.get();
-    if (!promise) {
-        promise = fn();
-        // Store the promise in the cache so that subsequent invocations
-        // will wait for the same promise to resolve (deduping).
-        cache.promise.set(promise);
-    }
-    try {
-        const data = await promise;
-        // Store the response in the cache so that subsequent invocations
-        // will return the same response.
-        cache.response.set({ created: new Date(), data });
-        return data;
-    }
-    finally {
-        // Clear the promise cache so that subsequent invocations will
-        // invoke the promise again.
-        cache.promise.clear();
-    }
-}
-//# sourceMappingURL=withCache.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getBlockNumber.js
-
-const cacheKey = (id) => `blockNumber.${id}`;
-/** @internal */
-function getBlockNumberCache(id) {
-    return getCache(cacheKey(id));
-}
-/**
- * Returns the number of the most recent block seen.
- *
- * - Docs: https://viem.sh/docs/actions/public/getBlockNumber
- * - Examples: https://stackblitz.com/github/wevm/viem/tree/main/examples/blocks_fetching-blocks
- * - JSON-RPC Methods: [`eth_blockNumber`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_blocknumber)
- *
- * @param client - Client to use
- * @param parameters - {@link GetBlockNumberParameters}
- * @returns The number of the block. {@link GetBlockNumberReturnType}
- *
- * @example
- * import { createPublicClient, http } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { getBlockNumber } from 'viem/public'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const blockNumber = await getBlockNumber(client)
- * // 69420n
- */
-async function getBlockNumber(client, { cacheTime = client.cacheTime } = {}) {
-    const blockNumberHex = await withCache(() => client.request({
-        method: 'eth_blockNumber',
-    }), { cacheKey: cacheKey(client.uid), cacheTime });
-    return BigInt(blockNumberHex);
-}
-//# sourceMappingURL=getBlockNumber.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/watchBlockNumber.js
-
-
-
-
-
-
-/**
- * Watches and returns incoming block numbers.
- *
- * - Docs: https://viem.sh/docs/actions/public/watchBlockNumber
- * - Examples: https://stackblitz.com/github/wevm/viem/tree/main/examples/blocks_watching-blocks
- * - JSON-RPC Methods:
- *   - When `poll: true`, calls [`eth_blockNumber`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_blocknumber) on a polling interval.
- *   - When `poll: false` & WebSocket Transport, uses a WebSocket subscription via [`eth_subscribe`](https://docs.alchemy.com/reference/eth-subscribe-polygon) and the `"newHeads"` event.
- *
- * @param client - Client to use
- * @param parameters - {@link WatchBlockNumberParameters}
- * @returns A function that can be invoked to stop watching for new block numbers. {@link WatchBlockNumberReturnType}
- *
- * @example
- * import { createPublicClient, watchBlockNumber, http } from 'viem'
- * import { mainnet } from 'viem/chains'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const unwatch = watchBlockNumber(client, {
- *   onBlockNumber: (blockNumber) => console.log(blockNumber),
- * })
- */
-function watchBlockNumber(client, { emitOnBegin = false, emitMissed = false, onBlockNumber, onError, poll: poll_, pollingInterval = client.pollingInterval, }) {
-    const enablePolling = (() => {
-        if (typeof poll_ !== 'undefined')
-            return poll_;
-        if (client.transport.type === 'webSocket' ||
-            client.transport.type === 'ipc')
-            return false;
-        if (client.transport.type === 'fallback' &&
-            (client.transport.transports[0].config.type === 'webSocket' ||
-                client.transport.transports[0].config.type === 'ipc'))
-            return false;
-        return true;
-    })();
-    let prevBlockNumber;
-    const pollBlockNumber = () => {
-        const observerId = (0,stringify/* stringify */.A)([
-            'watchBlockNumber',
-            client.uid,
-            emitOnBegin,
-            emitMissed,
-            pollingInterval,
-        ]);
-        return observe(observerId, { onBlockNumber, onError }, (emit) => poll(async () => {
-            try {
-                const blockNumber = await getAction(client, getBlockNumber, 'getBlockNumber')({ cacheTime: 0 });
-                if (prevBlockNumber !== undefined) {
-                    // If the current block number is the same as the previous,
-                    // we can skip.
-                    if (blockNumber === prevBlockNumber)
-                        return;
-                    // If we have missed out on some previous blocks, and the
-                    // `emitMissed` flag is truthy, let's emit those blocks.
-                    if (blockNumber - prevBlockNumber > 1 && emitMissed) {
-                        for (let i = prevBlockNumber + 1n; i < blockNumber; i++) {
-                            emit.onBlockNumber(i, prevBlockNumber);
-                            prevBlockNumber = i;
-                        }
-                    }
-                }
-                // If the next block number is greater than the previous,
-                // it is not in the past, and we can emit the new block number.
-                if (prevBlockNumber === undefined ||
-                    blockNumber > prevBlockNumber) {
-                    emit.onBlockNumber(blockNumber, prevBlockNumber);
-                    prevBlockNumber = blockNumber;
-                }
-            }
-            catch (err) {
-                emit.onError?.(err);
-            }
-        }, {
-            emitOnBegin,
-            interval: pollingInterval,
-        }));
-    };
-    const subscribeBlockNumber = () => {
-        const observerId = (0,stringify/* stringify */.A)([
-            'watchBlockNumber',
-            client.uid,
-            emitOnBegin,
-            emitMissed,
-        ]);
-        return observe(observerId, { onBlockNumber, onError }, (emit) => {
-            let active = true;
-            let unsubscribe = () => (active = false);
-            (async () => {
-                try {
-                    const transport = (() => {
-                        if (client.transport.type === 'fallback') {
-                            const transport = client.transport.transports.find((transport) => transport.config.type === 'webSocket' ||
-                                transport.config.type === 'ipc');
-                            if (!transport)
-                                return client.transport;
-                            return transport.value;
-                        }
-                        return client.transport;
-                    })();
-                    const { unsubscribe: unsubscribe_ } = await transport.subscribe({
-                        params: ['newHeads'],
-                        onData(data) {
-                            if (!active)
-                                return;
-                            const blockNumber = (0,fromHex/* hexToBigInt */.uU)(data.result?.number);
-                            emit.onBlockNumber(blockNumber, prevBlockNumber);
-                            prevBlockNumber = blockNumber;
-                        },
-                        onError(error) {
-                            emit.onError?.(error);
-                        },
-                    });
-                    unsubscribe = unsubscribe_;
-                    if (!active)
-                        unsubscribe();
-                }
-                catch (err) {
-                    onError?.(err);
-                }
-            })();
-            return () => unsubscribe();
-        });
-    };
-    return enablePolling ? pollBlockNumber() : subscribeBlockNumber();
-}
-//# sourceMappingURL=watchBlockNumber.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/waitForTransactionReceipt.js
-
-
-
-
-
-
-
-
-
-
-
-/**
- * Waits for the [Transaction](https://viem.sh/docs/glossary/terms#transaction) to be included on a [Block](https://viem.sh/docs/glossary/terms#block) (one confirmation), and then returns the [Transaction Receipt](https://viem.sh/docs/glossary/terms#transaction-receipt).
- *
- * - Docs: https://viem.sh/docs/actions/public/waitForTransactionReceipt
- * - Example: https://stackblitz.com/github/wevm/viem/tree/main/examples/transactions_sending-transactions
- * - JSON-RPC Methods:
- *   - Polls [`eth_getTransactionReceipt`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getTransactionReceipt) on each block until it has been processed.
- *   - If a Transaction has been replaced:
- *     - Calls [`eth_getBlockByNumber`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getblockbynumber) and extracts the transactions
- *     - Checks if one of the Transactions is a replacement
- *     - If so, calls [`eth_getTransactionReceipt`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getTransactionReceipt).
- *
- * The `waitForTransactionReceipt` action additionally supports Replacement detection (e.g. sped up Transactions).
- *
- * Transactions can be replaced when a user modifies their transaction in their wallet (to speed up or cancel). Transactions are replaced when they are sent from the same nonce.
- *
- * There are 3 types of Transaction Replacement reasons:
- *
- * - `repriced`: The gas price has been modified (e.g. different `maxFeePerGas`)
- * - `cancelled`: The Transaction has been cancelled (e.g. `value === 0n`)
- * - `replaced`: The Transaction has been replaced (e.g. different `value` or `data`)
- *
- * @param client - Client to use
- * @param parameters - {@link WaitForTransactionReceiptParameters}
- * @returns The transaction receipt. {@link WaitForTransactionReceiptReturnType}
- *
- * @example
- * import { createPublicClient, waitForTransactionReceipt, http } from 'viem'
- * import { mainnet } from 'viem/chains'
- *
- * const client = createPublicClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const transactionReceipt = await waitForTransactionReceipt(client, {
- *   hash: '0x4ca7ee652d57678f26e887c149ab0735f41de37bcad58c9f6d3ed5824f15b74d',
- * })
- */
-async function waitForTransactionReceipt(client, parameters) {
-    const { checkReplacement = true, confirmations = 1, hash, onReplaced, retryCount = 6, retryDelay = ({ count }) => ~~(1 << count) * 200, // exponential backoff
-    timeout = 180_000, } = parameters;
-    const observerId = (0,stringify/* stringify */.A)(['waitForTransactionReceipt', client.uid, hash]);
-    const pollingInterval = (() => {
-        if (parameters.pollingInterval)
-            return parameters.pollingInterval;
-        if (client.chain?.experimental_preconfirmationTime)
-            return client.chain.experimental_preconfirmationTime;
-        return client.pollingInterval;
-    })();
-    let transaction;
-    let replacedTransaction;
-    let receipt;
-    let retrying = false;
-    let _unobserve;
-    let _unwatch;
-    const { promise, resolve, reject } = (0,withResolvers/* withResolvers */.Y)();
-    const timer = timeout
-        ? setTimeout(() => {
-            _unwatch?.();
-            _unobserve?.();
-            reject(new errors_transaction/* WaitForTransactionReceiptTimeoutError */.WA({ hash }));
-        }, timeout)
-        : undefined;
-    _unobserve = observe(observerId, { onReplaced, resolve, reject }, async (emit) => {
-        receipt = await getAction(client, getTransactionReceipt, 'getTransactionReceipt')({ hash }).catch(() => undefined);
-        if (receipt && confirmations <= 1) {
-            clearTimeout(timer);
-            emit.resolve(receipt);
-            _unobserve?.();
-            return;
-        }
-        _unwatch = getAction(client, watchBlockNumber, 'watchBlockNumber')({
-            emitMissed: true,
-            emitOnBegin: true,
-            poll: true,
-            pollingInterval,
-            async onBlockNumber(blockNumber_) {
-                const done = (fn) => {
-                    clearTimeout(timer);
-                    _unwatch?.();
-                    fn();
-                    _unobserve?.();
-                };
-                let blockNumber = blockNumber_;
-                if (retrying)
-                    return;
-                try {
-                    // If we already have a valid receipt, let's check if we have enough
-                    // confirmations. If we do, then we can resolve.
-                    if (receipt) {
-                        if (confirmations > 1 &&
-                            (!receipt.blockNumber ||
-                                blockNumber - receipt.blockNumber + 1n < confirmations))
-                            return;
-                        done(() => emit.resolve(receipt));
-                        return;
-                    }
-                    // Get the transaction to check if it's been replaced.
-                    // We need to retry as some RPC Providers may be slow to sync
-                    // up mined transactions.
-                    if (checkReplacement && !transaction) {
-                        retrying = true;
-                        await withRetry(async () => {
-                            transaction = (await getAction(client, getTransaction, 'getTransaction')({ hash }));
-                            if (transaction.blockNumber)
-                                blockNumber = transaction.blockNumber;
-                        }, {
-                            delay: retryDelay,
-                            retryCount,
-                        });
-                        retrying = false;
-                    }
-                    // Get the receipt to check if it's been processed.
-                    receipt = await getAction(client, getTransactionReceipt, 'getTransactionReceipt')({ hash });
-                    // Check if we have enough confirmations. If not, continue polling.
-                    if (confirmations > 1 &&
-                        (!receipt.blockNumber ||
-                            blockNumber - receipt.blockNumber + 1n < confirmations))
-                        return;
-                    done(() => emit.resolve(receipt));
-                }
-                catch (err) {
-                    // If the receipt is not found, the transaction will be pending.
-                    // We need to check if it has potentially been replaced.
-                    if (err instanceof errors_transaction/* TransactionNotFoundError */.Kz ||
-                        err instanceof errors_transaction/* TransactionReceiptNotFoundError */.Kc) {
-                        if (!transaction) {
-                            retrying = false;
-                            return;
-                        }
-                        try {
-                            replacedTransaction = transaction;
-                            // Let's retrieve the transactions from the current block.
-                            // We need to retry as some RPC Providers may be slow to sync
-                            // up mined blocks.
-                            retrying = true;
-                            const block = await withRetry(() => getAction(client, getBlock_getBlock, 'getBlock')({
-                                blockNumber,
-                                includeTransactions: true,
-                            }), {
-                                delay: retryDelay,
-                                retryCount,
-                                shouldRetry: ({ error }) => error instanceof BlockNotFoundError,
-                            });
-                            retrying = false;
-                            const replacementTransaction = block.transactions.find(({ from, nonce }) => from === replacedTransaction.from &&
-                                nonce === replacedTransaction.nonce);
-                            // If we couldn't find a replacement transaction, continue polling.
-                            if (!replacementTransaction)
-                                return;
-                            // If we found a replacement transaction, return it's receipt.
-                            receipt = await getAction(client, getTransactionReceipt, 'getTransactionReceipt')({
-                                hash: replacementTransaction.hash,
-                            });
-                            // Check if we have enough confirmations. If not, continue polling.
-                            if (confirmations > 1 &&
-                                (!receipt.blockNumber ||
-                                    blockNumber - receipt.blockNumber + 1n < confirmations))
-                                return;
-                            let reason = 'replaced';
-                            if (replacementTransaction.to === replacedTransaction.to &&
-                                replacementTransaction.value === replacedTransaction.value &&
-                                replacementTransaction.input === replacedTransaction.input) {
-                                reason = 'repriced';
-                            }
-                            else if (replacementTransaction.from === replacementTransaction.to &&
-                                replacementTransaction.value === 0n) {
-                                reason = 'cancelled';
-                            }
-                            done(() => {
-                                emit.onReplaced?.({
-                                    reason,
-                                    replacedTransaction: replacedTransaction,
-                                    transaction: replacementTransaction,
-                                    transactionReceipt: receipt,
-                                });
-                                emit.resolve(receipt);
-                            });
-                        }
-                        catch (err_) {
-                            done(() => emit.reject(err_));
-                        }
-                    }
-                    else {
-                        done(() => emit.reject(err));
-                    }
-                }
-            },
-        });
-    });
-    return promise;
-}
-//# sourceMappingURL=waitForTransactionReceipt.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/sendTransactionSync.js
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const sendTransactionSync_supportsWalletNamespace = new lru/* LruMap */.A(128);
-/**
- * Creates, signs, and sends a new transaction to the network synchronously.
- * Returns the transaction receipt.
- *
- * @param client - Client to use
- * @param parameters - {@link SendTransactionSyncParameters}
- * @returns The transaction receipt. {@link SendTransactionSyncReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { sendTransactionSync } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const receipt = await sendTransactionSync(client, {
- *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- *   to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
- *   value: 1000000000000000000n,
- * })
- *
- * @example
- * // Account Hoisting
- * import { createWalletClient, http } from 'viem'
- * import { privateKeyToAccount } from 'viem/accounts'
- * import { mainnet } from 'viem/chains'
- * import { sendTransactionSync } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   account: privateKeyToAccount('0x…'),
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const receipt = await sendTransactionSync(client, {
- *   to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
- *   value: 1000000000000000000n,
- * })
- */
-async function sendTransactionSync(client, parameters) {
-    const { account: account_ = client.account, assertChainId = true, chain = client.chain, accessList, authorizationList, blobs, data, dataSuffix = typeof client.dataSuffix === 'string'
-        ? client.dataSuffix
-        : client.dataSuffix?.value, gas, gasPrice, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, nonce, pollingInterval, throwOnReceiptRevert, type, value, ...rest } = parameters;
-    const timeout = parameters.timeout ?? Math.max((chain?.blockTime ?? 0) * 3, 5_000);
-    if (typeof account_ === 'undefined')
-        throw new AccountNotFoundError({
-            docsPath: '/docs/actions/wallet/sendTransactionSync',
-        });
-    const account = account_ ? (0,parseAccount/* parseAccount */.J)(account_) : null;
-    let nonceManagerParameters;
-    try {
-        (0,assertRequest/* assertRequest */.c)(parameters);
-        const to = await (async () => {
-            // If `to` exists on the parameters, use that.
-            if (parameters.to)
-                return parameters.to;
-            // If `to` is null, we are sending a deployment transaction.
-            if (parameters.to === null)
-                return undefined;
-            // If no `to` exists, and we are sending a EIP-7702 transaction, use the
-            // address of the first authorization in the list.
-            if (authorizationList && authorizationList.length > 0)
-                return await recoverAuthorizationAddress({
-                    authorization: authorizationList[0],
-                }).catch(() => {
-                    throw new base/* BaseError */.C('`to` is required. Could not infer from `authorizationList`.');
-                });
-            // Otherwise, we are sending a deployment transaction.
-            return undefined;
-        })();
-        if (account?.type === 'json-rpc' || account === null) {
-            let chainId;
-            if (chain !== null) {
-                chainId = await getAction(client, getChainId_getChainId, 'getChainId')({});
-                if (assertChainId)
-                    assertCurrentChain({
-                        currentChainId: chainId,
-                        chain,
-                    });
-            }
-            const chainFormat = client.chain?.formatters?.transactionRequest?.format;
-            const format = chainFormat || transactionRequest/* formatTransactionRequest */.Bv;
-            const request = format({
-                // Pick out extra data that might exist on the chain's transaction request type.
-                ...(0,extract/* extract */.o)(rest, { format: chainFormat }),
-                accessList,
-                account,
-                authorizationList,
-                blobs,
-                chainId,
-                data: dataSuffix ? (0,concat/* concat */.xW)([data ?? '0x', dataSuffix]) : data,
-                gas,
-                gasPrice,
-                maxFeePerBlobGas,
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-                nonce,
-                to,
-                type,
-                value,
-            }, 'sendTransaction');
-            const isWalletNamespaceSupported = sendTransactionSync_supportsWalletNamespace.get(client.uid);
-            const method = isWalletNamespaceSupported
-                ? 'wallet_sendTransaction'
-                : 'eth_sendTransaction';
-            const hash = await (async () => {
-                try {
-                    return await client.request({
-                        method,
-                        params: [request],
-                    }, { retryCount: 0 });
-                }
-                catch (e) {
-                    if (isWalletNamespaceSupported === false)
-                        throw e;
-                    const error = e;
-                    // If the transport does not support the method or input, attempt to use the
-                    // `wallet_sendTransaction` method.
-                    if (error.name === 'InvalidInputRpcError' ||
-                        error.name === 'InvalidParamsRpcError' ||
-                        error.name === 'MethodNotFoundRpcError' ||
-                        error.name === 'MethodNotSupportedRpcError') {
-                        return (await client
-                            .request({
-                            method: 'wallet_sendTransaction',
-                            params: [request],
-                        }, { retryCount: 0 })
-                            .then((hash) => {
-                            sendTransactionSync_supportsWalletNamespace.set(client.uid, true);
-                            return hash;
-                        })
-                            .catch((e) => {
-                            const walletNamespaceError = e;
-                            if (walletNamespaceError.name === 'MethodNotFoundRpcError' ||
-                                walletNamespaceError.name === 'MethodNotSupportedRpcError') {
-                                sendTransactionSync_supportsWalletNamespace.set(client.uid, false);
-                                throw error;
-                            }
-                            throw walletNamespaceError;
-                        }));
-                    }
-                    throw error;
-                }
-            })();
-            const receipt = await getAction(client, waitForTransactionReceipt, 'waitForTransactionReceipt')({
-                checkReplacement: false,
-                hash,
-                pollingInterval,
-                timeout,
-            });
-            if (throwOnReceiptRevert && receipt.status === 'reverted')
-                throw new errors_transaction/* TransactionReceiptRevertedError */.Sq({ receipt });
-            return receipt;
-        }
-        if (account?.type === 'local') {
-            if (account.nonceManager && typeof nonce === 'undefined') {
-                const requestChainId = rest.chainId;
-                const chainId = await (async () => {
-                    if (typeof requestChainId === 'number')
-                        return requestChainId;
-                    if (chain)
-                        return chain.id;
-                    return getAction(client, getChainId_getChainId, 'getChainId')({});
-                })();
-                nonceManagerParameters = { address: account.address, chainId };
-            }
-            // Prepare the request for signing (assign appropriate fees, etc.)
-            const request = await getAction(client, prepareTransactionRequest, 'prepareTransactionRequest')({
-                account,
-                accessList,
-                authorizationList,
-                blobs,
-                chain,
-                data: dataSuffix ? (0,concat/* concat */.xW)([data ?? '0x', dataSuffix]) : data,
-                gas,
-                gasPrice,
-                maxFeePerBlobGas,
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-                nonce,
-                nonceManager: account.nonceManager,
-                parameters: [...defaultParameters, 'sidecars'],
-                type,
-                value,
-                ...rest,
-                to,
-            });
-            const serializer = chain?.serializers?.transaction;
-            const serializedTransaction = (await account.signTransaction(request, {
-                serializer,
-            }));
-            return (await getAction(client, sendRawTransactionSync, 'sendRawTransactionSync')({
-                serializedTransaction,
-                throwOnReceiptRevert,
-                timeout: parameters.timeout,
-            }));
-        }
-        if (account?.type === 'smart')
-            throw new AccountTypeNotSupportedError({
-                metaMessages: [
-                    'Consider using the `sendUserOperation` Action instead.',
-                ],
-                docsPath: '/docs/actions/bundler/sendUserOperation',
-                type: 'smart',
-            });
-        throw new AccountTypeNotSupportedError({
-            docsPath: '/docs/actions/wallet/sendTransactionSync',
-            type: account?.type,
-        });
-    }
-    catch (err) {
-        if (err instanceof AccountTypeNotSupportedError)
-            throw err;
-        if (nonceManagerParameters &&
-            !(err instanceof errors_transaction/* TransactionReceiptRevertedError */.Sq))
-            account?.nonceManager?.reset(nonceManagerParameters);
-        throw getTransactionError(err, {
-            ...parameters,
-            account,
-            chain: parameters.chain || undefined,
-        });
-    }
-}
-//# sourceMappingURL=sendTransactionSync.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/showCallsStatus.js
-/**
- * Requests for the wallet to show information about a call batch
- * that was sent via `sendCalls`.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/showCallsStatus
- * - JSON-RPC Methods: [`wallet_showCallsStatus`](https://eips.ethereum.org/EIPS/eip-5792)
- *
- * @param client - Client to use
- * @returns Status of the calls. {@link ShowCallsStatusReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { showCallsStatus } from 'viem/actions'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * await showCallsStatus(client, { id: '0xdeadbeef' })
- */
-async function showCallsStatus(client, parameters) {
-    const { id } = parameters;
-    await client.request({
-        method: 'wallet_showCallsStatus',
-        params: [id],
-    });
-    return;
-}
-//# sourceMappingURL=showCallsStatus.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/signAuthorization.js
-
-
-
-/**
- * Signs an [EIP-7702 Authorization](https://eips.ethereum.org/EIPS/eip-7702) object.
- *
- * With the calculated signature, you can:
- * - use [`verifyAuthorization`](https://viem.sh/docs/eip7702/verifyAuthorization) to verify the signed Authorization object,
- * - use [`recoverAuthorizationAddress`](https://viem.sh/docs/eip7702/recoverAuthorizationAddress) to recover the signing address from the signed Authorization object.
- *
- * @param client - Client to use
- * @param parameters - {@link SignAuthorizationParameters}
- * @returns The signed Authorization object. {@link SignAuthorizationReturnType}
- *
- * @example
- * import { createClient, http } from 'viem'
- * import { privateKeyToAccount } from 'viem/accounts'
- * import { mainnet } from 'viem/chains'
- * import { signAuthorization } from 'viem/experimental'
- *
- * const client = createClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const signature = await signAuthorization(client, {
- *   account: privateKeyToAccount('0x..'),
- *   contractAddress: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- * })
- *
- * @example
- * // Account Hoisting
- * import { createClient, http } from 'viem'
- * import { privateKeyToAccount } from 'viem/accounts'
- * import { mainnet } from 'viem/chains'
- * import { signAuthorization } from 'viem/experimental'
- *
- * const client = createClient({
- *   account: privateKeyToAccount('0x…'),
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const signature = await signAuthorization(client, {
- *   contractAddress: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- * })
- */
-async function signAuthorization(client, parameters) {
-    const { account: account_ = client.account } = parameters;
-    if (!account_)
-        throw new AccountNotFoundError({
-            docsPath: '/docs/eip7702/signAuthorization',
-        });
-    const account = (0,parseAccount/* parseAccount */.J)(account_);
-    if (!account.signAuthorization)
-        throw new AccountTypeNotSupportedError({
-            docsPath: '/docs/eip7702/signAuthorization',
-            metaMessages: [
-                'The `signAuthorization` Action does not support JSON-RPC Accounts.',
-            ],
-            type: account.type,
-        });
-    const authorization = await prepareAuthorization(client, parameters);
-    return account.signAuthorization(authorization);
-}
-//# sourceMappingURL=signAuthorization.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/signMessage.js
-
-
-
-/**
- * Calculates an Ethereum-specific signature in [EIP-191 format](https://eips.ethereum.org/EIPS/eip-191): `keccak256("\x19Ethereum Signed Message:\n" + len(message) + message))`.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/signMessage
- * - JSON-RPC Methods:
- *   - JSON-RPC Accounts: [`personal_sign`](https://docs.metamask.io/guide/signing-data#personal-sign)
- *   - Local Accounts: Signs locally. No JSON-RPC request.
- *
- * With the calculated signature, you can:
- * - use [`verifyMessage`](https://viem.sh/docs/utilities/verifyMessage) to verify the signature,
- * - use [`recoverMessageAddress`](https://viem.sh/docs/utilities/recoverMessageAddress) to recover the signing address from a signature.
- *
- * @param client - Client to use
- * @param parameters - {@link SignMessageParameters}
- * @returns The signed message. {@link SignMessageReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { signMessage } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const signature = await signMessage(client, {
- *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- *   message: 'hello world',
- * })
- *
- * @example
- * // Account Hoisting
- * import { createWalletClient, custom } from 'viem'
- * import { privateKeyToAccount } from 'viem/accounts'
- * import { mainnet } from 'viem/chains'
- * import { signMessage } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   account: privateKeyToAccount('0x…'),
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const signature = await signMessage(client, {
- *   message: 'hello world',
- * })
- */
-async function signMessage(client, { account: account_ = client.account, message, }) {
-    if (!account_)
-        throw new AccountNotFoundError({
-            docsPath: '/docs/actions/wallet/signMessage',
-        });
-    const account = (0,parseAccount/* parseAccount */.J)(account_);
-    if (account.signMessage)
-        return account.signMessage({ message });
-    const message_ = (() => {
-        if (typeof message === 'string')
-            return (0,toHex/* stringToHex */.i3)(message);
-        if (message.raw instanceof Uint8Array)
-            return (0,toHex/* toHex */.nj)(message.raw);
-        return message.raw;
-    })();
-    return client.request({
-        method: 'personal_sign',
-        params: [message_, account.address],
-    }, { retryCount: 0 });
-}
-//# sourceMappingURL=signMessage.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/signTransaction.js
-
-
-
-
-
-
-
-
-/**
- * Signs a transaction.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/signTransaction
- * - JSON-RPC Methods:
- *   - JSON-RPC Accounts: [`eth_signTransaction`](https://ethereum.github.io/execution-apis/api-documentation/)
- *   - Local Accounts: Signs locally. No JSON-RPC request.
- *
- * @param args - {@link SignTransactionParameters}
- * @returns The signed serialized transaction. {@link SignTransactionReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { signTransaction } from 'viem/actions'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const signature = await signTransaction(client, {
- *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- *   to: '0x0000000000000000000000000000000000000000',
- *   value: 1n,
- * })
- *
- * @example
- * // Account Hoisting
- * import { createWalletClient, http } from 'viem'
- * import { privateKeyToAccount } from 'viem/accounts'
- * import { mainnet } from 'viem/chains'
- * import { signTransaction } from 'viem/actions'
- *
- * const client = createWalletClient({
- *   account: privateKeyToAccount('0x…'),
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const signature = await signTransaction(client, {
- *   to: '0x0000000000000000000000000000000000000000',
- *   value: 1n,
- * })
- */
-async function signTransaction(client, parameters) {
-    const { account: account_ = client.account, chain = client.chain, ...transaction } = parameters;
-    if (!account_)
-        throw new AccountNotFoundError({
-            docsPath: '/docs/actions/wallet/signTransaction',
-        });
-    const account = (0,parseAccount/* parseAccount */.J)(account_);
-    (0,assertRequest/* assertRequest */.c)({
-        account,
-        ...parameters,
-    });
-    const chainId = await getAction(client, getChainId_getChainId, 'getChainId')({});
-    if (chain !== null)
-        assertCurrentChain({
-            currentChainId: chainId,
-            chain,
-        });
-    const formatters = chain?.formatters || client.chain?.formatters;
-    const format = formatters?.transactionRequest?.format || transactionRequest/* formatTransactionRequest */.Bv;
-    if (account.signTransaction)
-        return account.signTransaction({
-            ...transaction,
-            account,
-            chainId,
-        }, { serializer: client.chain?.serializers?.transaction });
-    return await client.request({
-        method: 'eth_signTransaction',
-        params: [
-            {
-                ...format({
-                    ...transaction,
-                    account,
-                }, 'signTransaction'),
-                chainId: (0,toHex/* numberToHex */.cK)(chainId),
-                from: account.address,
-            },
-        ],
-    }, { retryCount: 0 });
-}
-//# sourceMappingURL=signTransaction.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/abi.js
-var errors_abi = __nccwpck_require__(1323);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/address.js
-var errors_address = __nccwpck_require__(5345);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/typedData.js
-
-
-class InvalidDomainError extends base/* BaseError */.C {
-    constructor({ domain }) {
-        super(`Invalid domain "${(0,stringify/* stringify */.A)(domain)}".`, {
-            metaMessages: ['Must be a valid EIP-712 domain.'],
-        });
-    }
-}
-class InvalidPrimaryTypeError extends base/* BaseError */.C {
-    constructor({ primaryType, types, }) {
-        super(`Invalid primary type \`${primaryType}\` must be one of \`${JSON.stringify(Object.keys(types))}\`.`, {
-            docsPath: '/api/glossary/Errors#typeddatainvalidprimarytypeerror',
-            metaMessages: ['Check that the primary type is a key in `types`.'],
-        });
-    }
-}
-class InvalidStructTypeError extends base/* BaseError */.C {
-    constructor({ type }) {
-        super(`Struct type "${type}" is invalid.`, {
-            metaMessages: ['Struct type must not be a Solidity type.'],
-            name: 'InvalidStructTypeError',
-        });
-    }
-}
-//# sourceMappingURL=typedData.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/address/isAddress.js
-var isAddress = __nccwpck_require__(9936);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/regex.js
-var regex = __nccwpck_require__(3756);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/typedData.js
-
-
-
-
-
-
-
-
-
-function serializeTypedData(parameters) {
-    const { domain: domain_, message: message_, primaryType, types, } = parameters;
-    const normalizeData = (struct, data_) => {
-        const data = { ...data_ };
-        for (const param of struct) {
-            const { name, type } = param;
-            if (type === 'address')
-                data[name] = data[name].toLowerCase();
-        }
-        return data;
-    };
-    const domain = (() => {
-        if (!types.EIP712Domain)
-            return {};
-        if (!domain_)
-            return {};
-        return normalizeData(types.EIP712Domain, domain_);
-    })();
-    const message = (() => {
-        if (primaryType === 'EIP712Domain')
-            return undefined;
-        return normalizeData(types[primaryType], message_);
-    })();
-    return (0,stringify/* stringify */.A)({ domain, message, primaryType, types });
-}
-function validateTypedData(parameters) {
-    const { domain, message, primaryType, types } = parameters;
-    const validateData = (struct, data) => {
-        for (const param of struct) {
-            const { name, type } = param;
-            const value = data[name];
-            const integerMatch = type.match(regex/* integerRegex */.Ge);
-            if (integerMatch &&
-                (typeof value === 'number' || typeof value === 'bigint')) {
-                const [_type, base, size_] = integerMatch;
-                // If number cannot be cast to a sized hex value, it is out of range
-                // and will throw.
-                (0,toHex/* numberToHex */.cK)(value, {
-                    signed: base === 'int',
-                    size: Number.parseInt(size_, 10) / 8,
-                });
-            }
-            if (type === 'address' && typeof value === 'string' && !(0,isAddress/* isAddress */.P)(value))
-                throw new errors_address/* InvalidAddressError */.M({ address: value });
-            const bytesMatch = type.match(regex/* bytesRegex */.BD);
-            if (bytesMatch) {
-                const [_type, size_] = bytesMatch;
-                if (size_ && (0,data_size/* size */.E)(value) !== Number.parseInt(size_, 10))
-                    throw new errors_abi/* BytesSizeMismatchError */.BI({
-                        expectedSize: Number.parseInt(size_, 10),
-                        givenSize: (0,data_size/* size */.E)(value),
-                    });
-            }
-            const struct = types[type];
-            if (struct) {
-                validateReference(type);
-                validateData(struct, value);
-            }
-        }
-    };
-    // Validate domain types.
-    if (types.EIP712Domain && domain) {
-        if (typeof domain !== 'object')
-            throw new InvalidDomainError({ domain });
-        validateData(types.EIP712Domain, domain);
-    }
-    // Validate message types.
-    if (primaryType !== 'EIP712Domain') {
-        if (types[primaryType])
-            validateData(types[primaryType], message);
-        else
-            throw new InvalidPrimaryTypeError({ primaryType, types });
-    }
-}
-function getTypesForEIP712Domain({ domain, }) {
-    return [
-        typeof domain?.name === 'string' && { name: 'name', type: 'string' },
-        domain?.version && { name: 'version', type: 'string' },
-        (typeof domain?.chainId === 'number' ||
-            typeof domain?.chainId === 'bigint') && {
-            name: 'chainId',
-            type: 'uint256',
-        },
-        domain?.verifyingContract && {
-            name: 'verifyingContract',
-            type: 'address',
-        },
-        domain?.salt && { name: 'salt', type: 'bytes32' },
-    ].filter(Boolean);
-}
-function domainSeparator({ domain }) {
-    return hashDomain({
-        domain: domain,
-        types: {
-            EIP712Domain: getTypesForEIP712Domain({ domain }),
-        },
-    });
-}
-/** @internal */
-function validateReference(type) {
-    // Struct type must not be a Solidity type.
-    if (type === 'address' ||
-        type === 'bool' ||
-        type === 'string' ||
-        type.startsWith('bytes') ||
-        type.startsWith('uint') ||
-        type.startsWith('int'))
-        throw new InvalidStructTypeError({ type });
-}
-//# sourceMappingURL=typedData.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/signTypedData.js
-
-
-
-/**
- * Signs typed data and calculates an Ethereum-specific signature in [https://eips.ethereum.org/EIPS/eip-712](https://eips.ethereum.org/EIPS/eip-712): `sign(keccak256("\x19\x01" ‖ domainSeparator ‖ hashStruct(message)))`
- *
- * - Docs: https://viem.sh/docs/actions/wallet/signTypedData
- * - JSON-RPC Methods:
- *   - JSON-RPC Accounts: [`eth_signTypedData_v4`](https://docs.metamask.io/guide/signing-data#signtypeddata-v4)
- *   - Local Accounts: Signs locally. No JSON-RPC request.
- *
- * @param client - Client to use
- * @param parameters - {@link SignTypedDataParameters}
- * @returns The signed data. {@link SignTypedDataReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { signTypedData } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const signature = await signTypedData(client, {
- *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- *   domain: {
- *     name: 'Ether Mail',
- *     version: '1',
- *     chainId: 1,
- *     verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
- *   },
- *   types: {
- *     Person: [
- *       { name: 'name', type: 'string' },
- *       { name: 'wallet', type: 'address' },
- *     ],
- *     Mail: [
- *       { name: 'from', type: 'Person' },
- *       { name: 'to', type: 'Person' },
- *       { name: 'contents', type: 'string' },
- *     ],
- *   },
- *   primaryType: 'Mail',
- *   message: {
- *     from: {
- *       name: 'Cow',
- *       wallet: '0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826',
- *     },
- *     to: {
- *       name: 'Bob',
- *       wallet: '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB',
- *     },
- *     contents: 'Hello, Bob!',
- *   },
- * })
- *
- * @example
- * // Account Hoisting
- * import { createWalletClient, http } from 'viem'
- * import { privateKeyToAccount } from 'viem/accounts'
- * import { mainnet } from 'viem/chains'
- * import { signTypedData } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   account: privateKeyToAccount('0x…'),
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const signature = await signTypedData(client, {
- *   domain: {
- *     name: 'Ether Mail',
- *     version: '1',
- *     chainId: 1,
- *     verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
- *   },
- *   types: {
- *     Person: [
- *       { name: 'name', type: 'string' },
- *       { name: 'wallet', type: 'address' },
- *     ],
- *     Mail: [
- *       { name: 'from', type: 'Person' },
- *       { name: 'to', type: 'Person' },
- *       { name: 'contents', type: 'string' },
- *     ],
- *   },
- *   primaryType: 'Mail',
- *   message: {
- *     from: {
- *       name: 'Cow',
- *       wallet: '0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826',
- *     },
- *     to: {
- *       name: 'Bob',
- *       wallet: '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB',
- *     },
- *     contents: 'Hello, Bob!',
- *   },
- * })
- */
-async function signTypedData(client, parameters) {
-    const { account: account_ = client.account, domain, message, primaryType, } = parameters;
-    if (!account_)
-        throw new AccountNotFoundError({
-            docsPath: '/docs/actions/wallet/signTypedData',
-        });
-    const account = (0,parseAccount/* parseAccount */.J)(account_);
-    const types = {
-        EIP712Domain: getTypesForEIP712Domain({ domain }),
-        ...parameters.types,
-    };
-    // Need to do a runtime validation check on addresses, byte ranges, integer ranges, etc
-    // as we can't statically check this with TypeScript.
-    validateTypedData({ domain, message, primaryType, types });
-    if (account.signTypedData)
-        return account.signTypedData({ domain, message, primaryType, types });
-    const typedData = serializeTypedData({ domain, message, primaryType, types });
-    return client.request({
-        method: 'eth_signTypedData_v4',
-        params: [account.address, typedData],
-    }, { retryCount: 0 });
-}
-//# sourceMappingURL=signTypedData.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/switchChain.js
-
-/**
- * Switch the target chain in a wallet.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/switchChain
- * - JSON-RPC Methods: [`wallet_switchEthereumChain`](https://eips.ethereum.org/EIPS/eip-3326)
- *
- * @param client - Client to use
- * @param parameters - {@link SwitchChainParameters}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet, optimism } from 'viem/chains'
- * import { switchChain } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * await switchChain(client, { id: optimism.id })
- */
-async function switchChain(client, { id }) {
-    await client.request({
-        method: 'wallet_switchEthereumChain',
-        params: [
-            {
-                chainId: (0,toHex/* numberToHex */.cK)(id),
-            },
-        ],
-    }, { retryCount: 0 });
-}
-//# sourceMappingURL=switchChain.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/watchAsset.js
-/**
- * Adds an EVM chain to the wallet.
- *
- * - Docs: https://viem.sh/docs/actions/wallet/watchAsset
- * - JSON-RPC Methods: [`eth_switchEthereumChain`](https://eips.ethereum.org/EIPS/eip-747)
- *
- * @param client - Client to use
- * @param parameters - {@link WatchAssetParameters}
- * @returns Boolean indicating if the token was successfully added. {@link WatchAssetReturnType}
- *
- * @example
- * import { createWalletClient, custom } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { watchAsset } from 'viem/wallet'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const success = await watchAsset(client, {
- *   type: 'ERC20',
- *   options: {
- *     address: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
- *     decimals: 18,
- *     symbol: 'WETH',
- *   },
- * })
- */
-async function watchAsset(client, params) {
-    const added = await client.request({
-        method: 'wallet_watchAsset',
-        params,
-    }, { retryCount: 0 });
-    return added;
-}
-//# sourceMappingURL=watchAsset.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/contract.js + 1 modules
-var contract = __nccwpck_require__(2193);
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/errors/getContractError.js
 
 
@@ -47627,363 +42786,6 @@ function getContractError(err, { abi, address, args, docsPath, functionName, sen
     });
 }
 //# sourceMappingURL=getContractError.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/writeContract.js
-
-
-
-
-
-
-/**
- * Executes a write function on a contract.
- *
- * - Docs: https://viem.sh/docs/contract/writeContract
- * - Examples: https://stackblitz.com/github/wevm/viem/tree/main/examples/contracts_writing-to-contracts
- *
- * A "write" function on a Solidity contract modifies the state of the blockchain. These types of functions require gas to be executed, and hence a [Transaction](https://viem.sh/docs/glossary/terms) is needed to be broadcast in order to change the state.
- *
- * Internally, uses a [Wallet Client](https://viem.sh/docs/clients/wallet) to call the [`sendTransaction` action](https://viem.sh/docs/actions/wallet/sendTransaction) with [ABI-encoded `data`](https://viem.sh/docs/contract/encodeFunctionData).
- *
- * __Warning: The `write` internally sends a transaction – it does not validate if the contract write will succeed (the contract may throw an error). It is highly recommended to [simulate the contract write with `contract.simulate`](https://viem.sh/docs/contract/writeContract#usage) before you execute it.__
- *
- * @param client - Client to use
- * @param parameters - {@link WriteContractParameters}
- * @returns A [Transaction Hash](https://viem.sh/docs/glossary/terms#hash). {@link WriteContractReturnType}
- *
- * @example
- * import { createWalletClient, custom, parseAbi } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { writeContract } from 'viem/contract'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const hash = await writeContract(client, {
- *   address: '0xFBA3912Ca04dd458c843e2EE08967fC04f3579c2',
- *   abi: parseAbi(['function mint(uint32 tokenId) nonpayable']),
- *   functionName: 'mint',
- *   args: [69420],
- * })
- *
- * @example
- * // With Validation
- * import { createWalletClient, http, parseAbi } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { simulateContract, writeContract } from 'viem/contract'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- * const { request } = await simulateContract(client, {
- *   address: '0xFBA3912Ca04dd458c843e2EE08967fC04f3579c2',
- *   abi: parseAbi(['function mint(uint32 tokenId) nonpayable']),
- *   functionName: 'mint',
- *   args: [69420],
- * }
- * const hash = await writeContract(client, request)
- */
-async function writeContract(client, parameters) {
-    return writeContract.internal(client, sendTransaction, 'sendTransaction', parameters);
-}
-(function (writeContract) {
-    async function internal(client, actionFn, name, parameters) {
-        const { abi, account: account_ = client.account, address, args, functionName, ...request } = parameters;
-        if (typeof account_ === 'undefined')
-            throw new AccountNotFoundError({
-                docsPath: '/docs/contract/writeContract',
-            });
-        const account = account_ ? (0,parseAccount/* parseAccount */.J)(account_) : null;
-        const data = (0,encodeFunctionData/* encodeFunctionData */.p)({
-            abi,
-            args,
-            functionName,
-        });
-        try {
-            return await getAction(client, actionFn, name)({
-                data,
-                to: address,
-                account,
-                ...request,
-            });
-        }
-        catch (error) {
-            throw getContractError(error, {
-                abi,
-                address,
-                args,
-                docsPath: '/docs/contract/writeContract',
-                functionName,
-                sender: account?.address,
-            });
-        }
-    }
-    writeContract.internal = internal;
-})(writeContract || (writeContract = {}));
-//# sourceMappingURL=writeContract.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/writeContractSync.js
-
-
-/**
- * Executes a write function on a contract synchronously.
- * Returns the transaction receipt.
- *
- * - Docs: https://viem.sh/docs/contract/writeContractSync
- *
- * A "write" function on a Solidity contract modifies the state of the blockchain. These types of functions require gas to be executed, and hence a [Transaction](https://viem.sh/docs/glossary/terms) is needed to be broadcast in order to change the state.
- *
- * Internally, uses a [Wallet Client](https://viem.sh/docs/clients/wallet) to call the [`sendTransaction` action](https://viem.sh/docs/actions/wallet/sendTransaction) with [ABI-encoded `data`](https://viem.sh/docs/contract/encodeFunctionData).
- *
- * __Warning: The `write` internally sends a transaction – it does not validate if the contract write will succeed (the contract may throw an error). It is highly recommended to [simulate the contract write with `contract.simulate`](https://viem.sh/docs/contract/writeContract#usage) before you execute it.__
- *
- * @param client - Client to use
- * @param parameters - {@link WriteContractParameters}
- * @returns A [Transaction Hash](https://viem.sh/docs/glossary/terms#hash). {@link WriteContractReturnType}
- *
- * @example
- * import { createWalletClient, custom, parseAbi } from 'viem'
- * import { mainnet } from 'viem/chains'
- * import { writeContract } from 'viem/contract'
- *
- * const client = createWalletClient({
- *   chain: mainnet,
- *   transport: custom(window.ethereum),
- * })
- * const receipt = await writeContractSync(client, {
- *   address: '0xFBA3912Ca04dd458c843e2EE08967fC04f3579c2',
- *   abi: parseAbi(['function mint(uint32 tokenId) nonpayable']),
- *   functionName: 'mint',
- *   args: [69420],
- * })
- */
-async function writeContractSync(client, parameters) {
-    return writeContract.internal(client, sendTransactionSync, 'sendTransactionSync', parameters);
-}
-//# sourceMappingURL=writeContractSync.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/clients/decorators/wallet.js
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-function walletActions(client) {
-    return {
-        addChain: (args) => addChain(client, args),
-        deployContract: (args) => deployContract(client, args),
-        fillTransaction: (args) => fillTransaction(client, args),
-        getAddresses: () => getAddresses(client),
-        getCallsStatus: (args) => getCallsStatus(client, args),
-        getCapabilities: (args) => getCapabilities(client, args),
-        getChainId: () => getChainId_getChainId(client),
-        getPermissions: () => getPermissions(client),
-        prepareAuthorization: (args) => prepareAuthorization(client, args),
-        prepareTransactionRequest: (args) => prepareTransactionRequest(client, args),
-        requestAddresses: () => requestAddresses(client),
-        requestPermissions: (args) => requestPermissions(client, args),
-        sendCalls: (args) => sendCalls(client, args),
-        sendCallsSync: (args) => sendCallsSync(client, args),
-        sendRawTransaction: (args) => sendRawTransaction(client, args),
-        sendRawTransactionSync: (args) => sendRawTransactionSync(client, args),
-        sendTransaction: (args) => sendTransaction(client, args),
-        sendTransactionSync: (args) => sendTransactionSync(client, args),
-        showCallsStatus: (args) => showCallsStatus(client, args),
-        signAuthorization: (args) => signAuthorization(client, args),
-        signMessage: (args) => signMessage(client, args),
-        signTransaction: (args) => signTransaction(client, args),
-        signTypedData: (args) => signTypedData(client, args),
-        switchChain: (args) => switchChain(client, args),
-        waitForCallsStatus: (args) => waitForCallsStatus(client, args),
-        watchAsset: (args) => watchAsset(client, args),
-        writeContract: (args) => writeContract(client, args),
-        writeContractSync: (args) => writeContractSync(client, args),
-    };
-}
-//# sourceMappingURL=wallet.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/clients/createWalletClient.js
-
-
-function createWalletClient(parameters) {
-    const { key = 'wallet', name = 'Wallet Client', transport } = parameters;
-    const client = createClient({
-        ...parameters,
-        key,
-        name,
-        transport,
-        type: 'walletClient',
-    });
-    return client.extend(walletActions);
-}
-//# sourceMappingURL=createWalletClient.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/constants/abis.js
-var abis = __nccwpck_require__(3280);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/abi/decodeFunctionResult.js
-var decodeFunctionResult = __nccwpck_require__(4759);
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/chain/getChainContractAddress.js
-var getChainContractAddress = __nccwpck_require__(8392);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/ens/errors.js
-
-
-/*
- * @description Checks if error is a valid null result UniversalResolver error
- */
-function isNullUniversalResolverError(err) {
-    if (!(err instanceof base/* BaseError */.C))
-        return false;
-    const cause = err.walk((e) => e instanceof contract/* ContractFunctionRevertedError */.M);
-    if (!(cause instanceof contract/* ContractFunctionRevertedError */.M))
-        return false;
-    if (cause.data?.errorName === 'HttpError')
-        return true;
-    if (cause.data?.errorName === 'ResolverError')
-        return true;
-    if (cause.data?.errorName === 'ResolverNotContract')
-        return true;
-    if (cause.data?.errorName === 'ResolverNotFound')
-        return true;
-    if (cause.data?.errorName === 'ReverseAddressMismatch')
-        return true;
-    if (cause.data?.errorName === 'UnsupportedResolverProfile')
-        return true;
-    return false;
-}
-//# sourceMappingURL=errors.js.map
-// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/ens/localBatchGatewayRequest.js + 3 modules
-var localBatchGatewayRequest = __nccwpck_require__(3547);
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/ens/encodedLabelToLabelhash.js
-
-function encodedLabelToLabelhash(label) {
-    if (label.length !== 66)
-        return null;
-    if (label.indexOf('[') !== 0)
-        return null;
-    if (label.indexOf(']') !== 65)
-        return null;
-    const hash = `0x${label.slice(1, 65)}`;
-    if (!(0,isHex/* isHex */.q)(hash))
-        return null;
-    return hash;
-}
-//# sourceMappingURL=encodedLabelToLabelhash.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/ens/namehash.js
-
-
-
-
-
-/**
- * @description Hashes ENS name
- *
- * - Since ENS names prohibit certain forbidden characters (e.g. underscore) and have other validation rules, you likely want to [normalize ENS names](https://docs.ens.domains/contract-api-reference/name-processing#normalising-names) with [UTS-46 normalization](https://unicode.org/reports/tr46) before passing them to `namehash`. You can use the built-in [`normalize`](https://viem.sh/docs/ens/utilities/normalize) function for this.
- *
- * @example
- * namehash('wevm.eth')
- * '0x08c85f2f4059e930c45a6aeff9dcd3bd95dc3c5c1cddef6a0626b31152248560'
- *
- * @link https://eips.ethereum.org/EIPS/eip-137
- */
-function namehash(name) {
-    let result = new Uint8Array(32).fill(0);
-    if (!name)
-        return (0,toHex/* bytesToHex */.My)(result);
-    const labels = name.split('.');
-    // Iterate in reverse order building up hash
-    for (let i = labels.length - 1; i >= 0; i -= 1) {
-        const hashFromEncodedLabel = encodedLabelToLabelhash(labels[i]);
-        const hashed = hashFromEncodedLabel
-            ? (0,toBytes/* toBytes */.ZJ)(hashFromEncodedLabel)
-            : (0,keccak256/* keccak256 */.S)((0,toBytes/* stringToBytes */.Af)(labels[i]), 'bytes');
-        result = (0,keccak256/* keccak256 */.S)((0,concat/* concat */.xW)([result, hashed]), 'bytes');
-    }
-    return (0,toHex/* bytesToHex */.My)(result);
-}
-//# sourceMappingURL=namehash.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/ens/encodeLabelhash.js
-function encodeLabelhash(hash) {
-    return `[${hash.slice(2)}]`;
-}
-//# sourceMappingURL=encodeLabelhash.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/ens/labelhash.js
-
-
-
-
-/**
- * @description Hashes ENS label
- *
- * - Since ENS labels prohibit certain forbidden characters (e.g. underscore) and have other validation rules, you likely want to [normalize ENS labels](https://docs.ens.domains/contract-api-reference/name-processing#normalising-names) with [UTS-46 normalization](https://unicode.org/reports/tr46) before passing them to `labelhash`. You can use the built-in [`normalize`](https://viem.sh/docs/ens/utilities/normalize) function for this.
- *
- * @example
- * labelhash('eth')
- * '0x4f5b812789fc606be1b3b16908db13fc7a9adf7ca72641f84d75b47069d3d7f0'
- */
-function labelhash(label) {
-    const result = new Uint8Array(32).fill(0);
-    if (!label)
-        return (0,toHex/* bytesToHex */.My)(result);
-    return encodedLabelToLabelhash(label) || (0,keccak256/* keccak256 */.S)((0,toBytes/* stringToBytes */.Af)(label));
-}
-//# sourceMappingURL=labelhash.js.map
-;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/ens/packetToBytes.js
-
-
-
-/*
- * @description Encodes a DNS packet into a ByteArray containing a UDP payload.
- *
- * @example
- * packetToBytes('awkweb.eth')
- * '0x0661776b7765620365746800'
- *
- * @see https://docs.ens.domains/resolution/names#dns
- *
- */
-function packetToBytes(packet) {
-    // strip leading and trailing `.`
-    const value = packet.replace(/^\.|\.$/gm, '');
-    if (value.length === 0)
-        return new Uint8Array(1);
-    const bytes = new Uint8Array((0,toBytes/* stringToBytes */.Af)(value).byteLength + 2);
-    let offset = 0;
-    const list = value.split('.');
-    for (let i = 0; i < list.length; i++) {
-        let encoded = (0,toBytes/* stringToBytes */.Af)(list[i]);
-        // if the length is > 255, make the encoded label value a labelhash
-        // this is compatible with the universal resolver
-        if (encoded.byteLength > 255)
-            encoded = (0,toBytes/* stringToBytes */.Af)(encodeLabelhash(labelhash(list[i])));
-        bytes[offset] = encoded.length;
-        bytes.set(encoded, offset + 1);
-        offset += encoded.length + 1;
-    }
-    if (bytes.byteLength !== offset + 1)
-        return bytes.slice(0, offset + 1);
-    return bytes;
-}
-//# sourceMappingURL=packetToBytes.js.map
 // EXTERNAL MODULE: ./node_modules/viem/_esm/actions/public/call.js + 1 modules
 var call = __nccwpck_require__(8454);
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/readContract.js
@@ -48742,6 +43544,12 @@ async function getEnsResolver(client, parameters) {
 //# sourceMappingURL=getEnsResolver.js.map
 // EXTERNAL MODULE: ./node_modules/viem/_esm/utils/errors/getCallError.js
 var getCallError = __nccwpck_require__(8341);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/formatters/extract.js
+var extract = __nccwpck_require__(5098);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/formatters/transactionRequest.js
+var transactionRequest = __nccwpck_require__(7466);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/transaction/assertRequest.js
+var assertRequest = __nccwpck_require__(2355);
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/createAccessList.js
 
 
@@ -49099,6 +43907,1759 @@ async function createPendingTransactionFilter(client) {
     return { id, request: getRequest(id), type: 'transaction' };
 }
 //# sourceMappingURL=createPendingTransactionFilter.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/accounts/utils/publicKeyToAddress.js
+
+
+/**
+ * @description Converts an ECDSA public key to an address.
+ *
+ * @param publicKey The public key to convert.
+ *
+ * @returns The address.
+ */
+function publicKeyToAddress(publicKey) {
+    const address = (0,keccak256/* keccak256 */.S)(`0x${publicKey.substring(4)}`).substring(26);
+    return (0,getAddress/* checksumAddress */.o)(`0x${address}`);
+}
+//# sourceMappingURL=publicKeyToAddress.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/encoding/fromHex.js
+var fromHex = __nccwpck_require__(2248);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/signature/recoverPublicKey.js
+
+
+
+
+async function recoverPublicKey({ hash, signature, }) {
+    const hashHex = (0,isHex/* isHex */.q)(hash) ? hash : (0,toHex/* toHex */.nj)(hash);
+    const { secp256k1 } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 8805));
+    const signature_ = (() => {
+        // typeof signature: `Signature`
+        if (typeof signature === 'object' && 'r' in signature && 's' in signature) {
+            const { r, s, v, yParity } = signature;
+            const yParityOrV = Number(yParity ?? v);
+            const recoveryBit = toRecoveryBit(yParityOrV);
+            return new secp256k1.Signature((0,fromHex/* hexToBigInt */.uU)(r), (0,fromHex/* hexToBigInt */.uU)(s)).addRecoveryBit(recoveryBit);
+        }
+        // typeof signature: `Hex | ByteArray`
+        const signatureHex = (0,isHex/* isHex */.q)(signature) ? signature : (0,toHex/* toHex */.nj)(signature);
+        if ((0,data_size/* size */.E)(signatureHex) !== 65)
+            throw new Error('invalid signature length');
+        const yParityOrV = (0,fromHex/* hexToNumber */.ME)(`0x${signatureHex.slice(130)}`);
+        const recoveryBit = toRecoveryBit(yParityOrV);
+        return secp256k1.Signature.fromCompact(signatureHex.substring(2, 130)).addRecoveryBit(recoveryBit);
+    })();
+    const publicKey = signature_
+        .recoverPublicKey(hashHex.substring(2))
+        .toHex(false);
+    return `0x${publicKey}`;
+}
+function toRecoveryBit(yParityOrV) {
+    if (yParityOrV === 0 || yParityOrV === 1)
+        return yParityOrV;
+    if (yParityOrV === 27)
+        return 0;
+    if (yParityOrV === 28)
+        return 1;
+    throw new Error('Invalid yParityOrV value');
+}
+//# sourceMappingURL=recoverPublicKey.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/signature/recoverAddress.js
+
+
+async function recoverAddress({ hash, signature, }) {
+    return publicKeyToAddress(await recoverPublicKey({ hash, signature }));
+}
+//# sourceMappingURL=recoverAddress.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/cursor.js
+var utils_cursor = __nccwpck_require__(6933);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/encoding/toRlp.js
+
+
+
+
+function toRlp(bytes, to = 'hex') {
+    const encodable = getEncodable(bytes);
+    const cursor = (0,utils_cursor/* createCursor */.l)(new Uint8Array(encodable.length));
+    encodable.encode(cursor);
+    if (to === 'hex')
+        return (0,toHex/* bytesToHex */.My)(cursor.bytes);
+    return cursor.bytes;
+}
+function bytesToRlp(bytes, to = 'bytes') {
+    return toRlp(bytes, to);
+}
+function hexToRlp(hex, to = 'hex') {
+    return toRlp(hex, to);
+}
+function getEncodable(bytes) {
+    if (Array.isArray(bytes))
+        return getEncodableList(bytes.map((x) => getEncodable(x)));
+    return getEncodableBytes(bytes);
+}
+function getEncodableList(list) {
+    const bodyLength = list.reduce((acc, x) => acc + x.length, 0);
+    const sizeOfBodyLength = getSizeOfLength(bodyLength);
+    const length = (() => {
+        if (bodyLength <= 55)
+            return 1 + bodyLength;
+        return 1 + sizeOfBodyLength + bodyLength;
+    })();
+    return {
+        length,
+        encode(cursor) {
+            if (bodyLength <= 55) {
+                cursor.pushByte(0xc0 + bodyLength);
+            }
+            else {
+                cursor.pushByte(0xc0 + 55 + sizeOfBodyLength);
+                if (sizeOfBodyLength === 1)
+                    cursor.pushUint8(bodyLength);
+                else if (sizeOfBodyLength === 2)
+                    cursor.pushUint16(bodyLength);
+                else if (sizeOfBodyLength === 3)
+                    cursor.pushUint24(bodyLength);
+                else
+                    cursor.pushUint32(bodyLength);
+            }
+            for (const { encode } of list) {
+                encode(cursor);
+            }
+        },
+    };
+}
+function getEncodableBytes(bytesOrHex) {
+    const bytes = typeof bytesOrHex === 'string' ? (0,toBytes/* hexToBytes */.aT)(bytesOrHex) : bytesOrHex;
+    const sizeOfBytesLength = getSizeOfLength(bytes.length);
+    const length = (() => {
+        if (bytes.length === 1 && bytes[0] < 0x80)
+            return 1;
+        if (bytes.length <= 55)
+            return 1 + bytes.length;
+        return 1 + sizeOfBytesLength + bytes.length;
+    })();
+    return {
+        length,
+        encode(cursor) {
+            if (bytes.length === 1 && bytes[0] < 0x80) {
+                cursor.pushBytes(bytes);
+            }
+            else if (bytes.length <= 55) {
+                cursor.pushByte(0x80 + bytes.length);
+                cursor.pushBytes(bytes);
+            }
+            else {
+                cursor.pushByte(0x80 + 55 + sizeOfBytesLength);
+                if (sizeOfBytesLength === 1)
+                    cursor.pushUint8(bytes.length);
+                else if (sizeOfBytesLength === 2)
+                    cursor.pushUint16(bytes.length);
+                else if (sizeOfBytesLength === 3)
+                    cursor.pushUint24(bytes.length);
+                else
+                    cursor.pushUint32(bytes.length);
+                cursor.pushBytes(bytes);
+            }
+        },
+    };
+}
+function getSizeOfLength(length) {
+    if (length < 2 ** 8)
+        return 1;
+    if (length < 2 ** 16)
+        return 2;
+    if (length < 2 ** 24)
+        return 3;
+    if (length < 2 ** 32)
+        return 4;
+    throw new base/* BaseError */.C('Length is too large.');
+}
+//# sourceMappingURL=toRlp.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/authorization/hashAuthorization.js
+
+
+
+
+
+/**
+ * Computes an Authorization hash in [EIP-7702 format](https://eips.ethereum.org/EIPS/eip-7702): `keccak256('0x05' || rlp([chain_id, address, nonce]))`.
+ */
+function hashAuthorization(parameters) {
+    const { chainId, nonce, to } = parameters;
+    const address = parameters.contractAddress ?? parameters.address;
+    const hash = (0,keccak256/* keccak256 */.S)((0,concat/* concatHex */.aP)([
+        '0x05',
+        toRlp([
+            chainId ? (0,toHex/* numberToHex */.cK)(chainId) : '0x',
+            address,
+            nonce ? (0,toHex/* numberToHex */.cK)(nonce) : '0x',
+        ]),
+    ]));
+    if (to === 'bytes')
+        return (0,toBytes/* hexToBytes */.aT)(hash);
+    return hash;
+}
+//# sourceMappingURL=hashAuthorization.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/authorization/recoverAuthorizationAddress.js
+
+
+async function recoverAuthorizationAddress(parameters) {
+    const { authorization, signature } = parameters;
+    return recoverAddress({
+        hash: hashAuthorization(authorization),
+        signature: (signature ?? authorization),
+    });
+}
+//# sourceMappingURL=recoverAuthorizationAddress.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/unit/formatEther.js
+var formatEther = __nccwpck_require__(7939);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/unit/formatGwei.js
+var formatGwei = __nccwpck_require__(5819);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/transaction.js
+var errors_transaction = __nccwpck_require__(3725);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/estimateGas.js
+
+
+
+
+class EstimateGasExecutionError extends base/* BaseError */.C {
+    constructor(cause, { account, docsPath, chain, data, gas, gasPrice, maxFeePerGas, maxPriorityFeePerGas, nonce, to, value, }) {
+        const prettyArgs = (0,errors_transaction/* prettyPrint */.aO)({
+            from: account?.address,
+            to,
+            value: typeof value !== 'undefined' &&
+                `${(0,formatEther/* formatEther */.c)(value)} ${chain?.nativeCurrency?.symbol || 'ETH'}`,
+            data,
+            gas,
+            gasPrice: typeof gasPrice !== 'undefined' && `${(0,formatGwei/* formatGwei */.Q)(gasPrice)} gwei`,
+            maxFeePerGas: typeof maxFeePerGas !== 'undefined' &&
+                `${(0,formatGwei/* formatGwei */.Q)(maxFeePerGas)} gwei`,
+            maxPriorityFeePerGas: typeof maxPriorityFeePerGas !== 'undefined' &&
+                `${(0,formatGwei/* formatGwei */.Q)(maxPriorityFeePerGas)} gwei`,
+            nonce,
+        });
+        super(cause.shortMessage, {
+            cause,
+            docsPath,
+            metaMessages: [
+                ...(cause.metaMessages ? [...cause.metaMessages, ' '] : []),
+                'Estimate Gas Arguments:',
+                prettyArgs,
+            ].filter(Boolean),
+            name: 'EstimateGasExecutionError',
+        });
+        Object.defineProperty(this, "cause", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        this.cause = cause;
+    }
+}
+//# sourceMappingURL=estimateGas.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/node.js
+var node = __nccwpck_require__(5405);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/errors/getNodeError.js
+var getNodeError = __nccwpck_require__(7153);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/errors/getEstimateGasError.js
+
+
+
+function getEstimateGasError(err, { docsPath, ...args }) {
+    const cause = (() => {
+        const cause = (0,getNodeError/* getNodeError */.l)(err, args);
+        if (cause instanceof node/* UnknownNodeError */.RM)
+            return err;
+        return cause;
+    })();
+    return new EstimateGasExecutionError(cause, {
+        docsPath,
+        ...args,
+    });
+}
+//# sourceMappingURL=getEstimateGasError.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/stateOverride.js
+var utils_stateOverride = __nccwpck_require__(9110);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/fee.js
+
+
+class BaseFeeScalarError extends base/* BaseError */.C {
+    constructor() {
+        super('`baseFeeMultiplier` must be greater than 1.', {
+            name: 'BaseFeeScalarError',
+        });
+    }
+}
+class Eip1559FeesNotSupportedError extends base/* BaseError */.C {
+    constructor() {
+        super('Chain does not support EIP-1559 fees.', {
+            name: 'Eip1559FeesNotSupportedError',
+        });
+    }
+}
+class MaxFeePerGasTooLowError extends base/* BaseError */.C {
+    constructor({ maxPriorityFeePerGas }) {
+        super(`\`maxFeePerGas\` cannot be less than the \`maxPriorityFeePerGas\` (${(0,formatGwei/* formatGwei */.Q)(maxPriorityFeePerGas)} gwei).`, { name: 'MaxFeePerGasTooLowError' });
+    }
+}
+//# sourceMappingURL=fee.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/block.js
+
+class BlockNotFoundError extends base/* BaseError */.C {
+    constructor({ blockHash, blockNumber, }) {
+        let identifier = 'Block';
+        if (blockHash)
+            identifier = `Block at hash "${blockHash}"`;
+        if (blockNumber)
+            identifier = `Block at number "${blockNumber}"`;
+        super(`${identifier} could not be found.`, { name: 'BlockNotFoundError' });
+    }
+}
+//# sourceMappingURL=block.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/formatters/formatter.js
+function defineFormatter(type, format) {
+    return ({ exclude, format: overrides, }) => {
+        return {
+            exclude,
+            format: (args, action) => {
+                const formatted = format(args, action);
+                if (exclude) {
+                    for (const key of exclude) {
+                        delete formatted[key];
+                    }
+                }
+                return {
+                    ...formatted,
+                    ...overrides(args, action),
+                };
+            },
+            type,
+        };
+    };
+}
+//# sourceMappingURL=formatter.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/formatters/transaction.js
+
+
+const transactionType = {
+    '0x0': 'legacy',
+    '0x1': 'eip2930',
+    '0x2': 'eip1559',
+    '0x3': 'eip4844',
+    '0x4': 'eip7702',
+};
+function formatTransaction(transaction, _) {
+    const transaction_ = {
+        ...transaction,
+        blockHash: transaction.blockHash ? transaction.blockHash : null,
+        blockNumber: transaction.blockNumber
+            ? BigInt(transaction.blockNumber)
+            : null,
+        ...(transaction.blockTimestamp != null && {
+            blockTimestamp: BigInt(transaction.blockTimestamp),
+        }),
+        chainId: transaction.chainId ? (0,fromHex/* hexToNumber */.ME)(transaction.chainId) : undefined,
+        gas: transaction.gas ? BigInt(transaction.gas) : undefined,
+        gasPrice: transaction.gasPrice ? BigInt(transaction.gasPrice) : undefined,
+        maxFeePerBlobGas: transaction.maxFeePerBlobGas
+            ? BigInt(transaction.maxFeePerBlobGas)
+            : undefined,
+        maxFeePerGas: transaction.maxFeePerGas
+            ? BigInt(transaction.maxFeePerGas)
+            : undefined,
+        maxPriorityFeePerGas: transaction.maxPriorityFeePerGas
+            ? BigInt(transaction.maxPriorityFeePerGas)
+            : undefined,
+        nonce: transaction.nonce ? (0,fromHex/* hexToNumber */.ME)(transaction.nonce) : undefined,
+        to: transaction.to ? transaction.to : null,
+        transactionIndex: transaction.transactionIndex
+            ? Number(transaction.transactionIndex)
+            : null,
+        type: transaction.type
+            ? transactionType[transaction.type]
+            : undefined,
+        typeHex: transaction.type ? transaction.type : undefined,
+        value: transaction.value ? BigInt(transaction.value) : undefined,
+        v: transaction.v ? BigInt(transaction.v) : undefined,
+    };
+    if (transaction.authorizationList)
+        transaction_.authorizationList = formatAuthorizationList(transaction.authorizationList);
+    transaction_.yParity = (() => {
+        // If `yParity` is provided, we will use it.
+        if (transaction.yParity)
+            return Number(transaction.yParity);
+        // If no `yParity` provided, try derive from `v`.
+        if (typeof transaction_.v === 'bigint') {
+            if (transaction_.v === 0n || transaction_.v === 27n)
+                return 0;
+            if (transaction_.v === 1n || transaction_.v === 28n)
+                return 1;
+            if (transaction_.v >= 35n)
+                return transaction_.v % 2n === 0n ? 1 : 0;
+        }
+        return undefined;
+    })();
+    if (transaction_.type === 'legacy') {
+        delete transaction_.accessList;
+        delete transaction_.maxFeePerBlobGas;
+        delete transaction_.maxFeePerGas;
+        delete transaction_.maxPriorityFeePerGas;
+        delete transaction_.yParity;
+    }
+    if (transaction_.type === 'eip2930') {
+        delete transaction_.maxFeePerBlobGas;
+        delete transaction_.maxFeePerGas;
+        delete transaction_.maxPriorityFeePerGas;
+    }
+    if (transaction_.type === 'eip1559')
+        delete transaction_.maxFeePerBlobGas;
+    return transaction_;
+}
+const defineTransaction = /*#__PURE__*/ defineFormatter('transaction', formatTransaction);
+//////////////////////////////////////////////////////////////////////////////
+function formatAuthorizationList(authorizationList) {
+    return authorizationList.map((authorization) => ({
+        address: authorization.address,
+        chainId: Number(authorization.chainId),
+        nonce: Number(authorization.nonce),
+        r: authorization.r,
+        s: authorization.s,
+        yParity: Number(authorization.yParity),
+    }));
+}
+//# sourceMappingURL=transaction.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/formatters/block.js
+
+
+function formatBlock(block, _) {
+    const transactions = (block.transactions ?? []).map((transaction) => {
+        if (typeof transaction === 'string')
+            return transaction;
+        return formatTransaction(transaction);
+    });
+    return {
+        ...block,
+        baseFeePerGas: block.baseFeePerGas ? BigInt(block.baseFeePerGas) : null,
+        blobGasUsed: block.blobGasUsed ? BigInt(block.blobGasUsed) : undefined,
+        difficulty: block.difficulty ? BigInt(block.difficulty) : undefined,
+        excessBlobGas: block.excessBlobGas
+            ? BigInt(block.excessBlobGas)
+            : undefined,
+        gasLimit: block.gasLimit ? BigInt(block.gasLimit) : undefined,
+        gasUsed: block.gasUsed ? BigInt(block.gasUsed) : undefined,
+        hash: block.hash ? block.hash : null,
+        logsBloom: block.logsBloom ? block.logsBloom : null,
+        nonce: block.nonce ? block.nonce : null,
+        number: block.number ? BigInt(block.number) : null,
+        size: block.size ? BigInt(block.size) : undefined,
+        timestamp: block.timestamp ? BigInt(block.timestamp) : undefined,
+        transactions,
+        totalDifficulty: block.totalDifficulty
+            ? BigInt(block.totalDifficulty)
+            : null,
+    };
+}
+const defineBlock = /*#__PURE__*/ defineFormatter('block', formatBlock);
+//# sourceMappingURL=block.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getBlock.js
+
+
+
+/**
+ * Returns information about a block at a block number, hash, or tag.
+ *
+ * - Docs: https://viem.sh/docs/actions/public/getBlock
+ * - Examples: https://stackblitz.com/github/wevm/viem/tree/main/examples/blocks_fetching-blocks
+ * - JSON-RPC Methods:
+ *   - Calls [`eth_getBlockByNumber`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getblockbynumber) for `blockNumber` & `blockTag`.
+ *   - Calls [`eth_getBlockByHash`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getblockbyhash) for `blockHash`.
+ *
+ * @param client - Client to use
+ * @param parameters - {@link GetBlockParameters}
+ * @returns Information about the block. {@link GetBlockReturnType}
+ *
+ * @example
+ * import { createPublicClient, http } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { getBlock } from 'viem/public'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const block = await getBlock(client)
+ */
+async function getBlock_getBlock(client, { blockHash, blockNumber, blockTag = client.experimental_blockTag ?? 'latest', includeTransactions: includeTransactions_, } = {}) {
+    const includeTransactions = includeTransactions_ ?? false;
+    const blockNumberHex = blockNumber !== undefined ? (0,toHex/* numberToHex */.cK)(blockNumber) : undefined;
+    let block = null;
+    if (blockHash) {
+        block = await client.request({
+            method: 'eth_getBlockByHash',
+            params: [blockHash, includeTransactions],
+        }, { dedupe: true });
+    }
+    else {
+        block = await client.request({
+            method: 'eth_getBlockByNumber',
+            params: [blockNumberHex || blockTag, includeTransactions],
+        }, { dedupe: Boolean(blockNumberHex) });
+    }
+    if (!block)
+        throw new BlockNotFoundError({ blockHash, blockNumber });
+    const format = client.chain?.formatters?.block?.format || formatBlock;
+    return format(block, 'getBlock');
+}
+//# sourceMappingURL=getBlock.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getGasPrice.js
+/**
+ * Returns the current price of gas (in wei).
+ *
+ * - Docs: https://viem.sh/docs/actions/public/getGasPrice
+ * - JSON-RPC Methods: [`eth_gasPrice`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_gasprice)
+ *
+ * @param client - Client to use
+ * @returns The gas price (in wei). {@link GetGasPriceReturnType}
+ *
+ * @example
+ * import { createPublicClient, http } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { getGasPrice } from 'viem/public'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const gasPrice = await getGasPrice(client)
+ */
+async function getGasPrice(client) {
+    const gasPrice = await client.request({
+        method: 'eth_gasPrice',
+    });
+    return BigInt(gasPrice);
+}
+//# sourceMappingURL=getGasPrice.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/estimateMaxPriorityFeePerGas.js
+
+
+
+
+
+/**
+ * Returns an estimate for the max priority fee per gas (in wei) for a
+ * transaction to be likely included in the next block.
+ * Defaults to [`chain.fees.defaultPriorityFee`](/docs/clients/chains#fees-defaultpriorityfee) if set.
+ *
+ * - Docs: https://viem.sh/docs/actions/public/estimateMaxPriorityFeePerGas
+ *
+ * @param client - Client to use
+ * @returns An estimate (in wei) for the max priority fee per gas. {@link EstimateMaxPriorityFeePerGasReturnType}
+ *
+ * @example
+ * import { createPublicClient, http } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { estimateMaxPriorityFeePerGas } from 'viem/actions'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const maxPriorityFeePerGas = await estimateMaxPriorityFeePerGas(client)
+ * // 10000000n
+ */
+async function estimateMaxPriorityFeePerGas(client, args) {
+    return internal_estimateMaxPriorityFeePerGas(client, args);
+}
+async function internal_estimateMaxPriorityFeePerGas(client, args) {
+    const { block: block_, chain = client.chain, request } = args || {};
+    try {
+        const maxPriorityFeePerGas = chain?.fees?.maxPriorityFeePerGas ?? chain?.fees?.defaultPriorityFee;
+        if (typeof maxPriorityFeePerGas === 'function') {
+            const block = block_ || (await getAction(client, getBlock_getBlock, 'getBlock')({}));
+            const maxPriorityFeePerGas_ = await maxPriorityFeePerGas({
+                block,
+                client,
+                request,
+            });
+            if (maxPriorityFeePerGas_ === null)
+                throw new Error();
+            return maxPriorityFeePerGas_;
+        }
+        if (typeof maxPriorityFeePerGas !== 'undefined')
+            return maxPriorityFeePerGas;
+        const maxPriorityFeePerGasHex = await client.request({
+            method: 'eth_maxPriorityFeePerGas',
+        });
+        return (0,fromHex/* hexToBigInt */.uU)(maxPriorityFeePerGasHex);
+    }
+    catch {
+        // If the RPC Provider does not support `eth_maxPriorityFeePerGas`
+        // fall back to calculating it manually via `gasPrice - baseFeePerGas`.
+        // See: https://github.com/ethereum/pm/issues/328#:~:text=eth_maxPriorityFeePerGas%20after%20London%20will%20effectively%20return%20eth_gasPrice%20%2D%20baseFee
+        const [block, gasPrice] = await Promise.all([
+            block_
+                ? Promise.resolve(block_)
+                : getAction(client, getBlock_getBlock, 'getBlock')({}),
+            getAction(client, getGasPrice, 'getGasPrice')({}),
+        ]);
+        if (typeof block.baseFeePerGas !== 'bigint')
+            throw new Eip1559FeesNotSupportedError();
+        const maxPriorityFeePerGas = gasPrice - block.baseFeePerGas;
+        if (maxPriorityFeePerGas < 0n)
+            return 0n;
+        return maxPriorityFeePerGas;
+    }
+}
+//# sourceMappingURL=estimateMaxPriorityFeePerGas.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/estimateFeesPerGas.js
+
+
+
+
+
+/**
+ * Returns an estimate for the fees per gas (in wei) for a
+ * transaction to be likely included in the next block.
+ * Defaults to [`chain.fees.estimateFeesPerGas`](/docs/clients/chains#fees-estimatefeespergas) if set.
+ *
+ * - Docs: https://viem.sh/docs/actions/public/estimateFeesPerGas
+ *
+ * @param client - Client to use
+ * @param parameters - {@link EstimateFeesPerGasParameters}
+ * @returns An estimate (in wei) for the fees per gas. {@link EstimateFeesPerGasReturnType}
+ *
+ * @example
+ * import { createPublicClient, http } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { estimateFeesPerGas } from 'viem/actions'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const maxPriorityFeePerGas = await estimateFeesPerGas(client)
+ * // { maxFeePerGas: ..., maxPriorityFeePerGas: ... }
+ */
+async function estimateFeesPerGas(client, args) {
+    return internal_estimateFeesPerGas(client, args);
+}
+async function internal_estimateFeesPerGas(client, args) {
+    const { block: block_, chain = client.chain, request, type = 'eip1559', } = args || {};
+    const baseFeeMultiplier = await (async () => {
+        if (typeof chain?.fees?.baseFeeMultiplier === 'function')
+            return chain.fees.baseFeeMultiplier({
+                block: block_,
+                client,
+                request,
+            });
+        return chain?.fees?.baseFeeMultiplier ?? 1.2;
+    })();
+    if (baseFeeMultiplier < 1)
+        throw new BaseFeeScalarError();
+    const decimals = baseFeeMultiplier.toString().split('.')[1]?.length ?? 0;
+    const denominator = 10 ** decimals;
+    const multiply = (base) => (base * BigInt(Math.ceil(baseFeeMultiplier * denominator))) /
+        BigInt(denominator);
+    const block = block_
+        ? block_
+        : await getAction(client, getBlock_getBlock, 'getBlock')({});
+    if (typeof chain?.fees?.estimateFeesPerGas === 'function') {
+        const fees = (await chain.fees.estimateFeesPerGas({
+            block: block_,
+            client,
+            multiply,
+            request,
+            type,
+        }));
+        if (fees !== null)
+            return fees;
+    }
+    if (type === 'eip1559') {
+        if (typeof block.baseFeePerGas !== 'bigint')
+            throw new Eip1559FeesNotSupportedError();
+        const maxPriorityFeePerGas = typeof request?.maxPriorityFeePerGas === 'bigint'
+            ? request.maxPriorityFeePerGas
+            : await internal_estimateMaxPriorityFeePerGas(client, {
+                block: block,
+                chain,
+                request,
+            });
+        const baseFeePerGas = multiply(block.baseFeePerGas);
+        const maxFeePerGas = request?.maxFeePerGas ?? baseFeePerGas + maxPriorityFeePerGas;
+        return {
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+        };
+    }
+    const gasPrice = request?.gasPrice ??
+        multiply(await getAction(client, getGasPrice, 'getGasPrice')({}));
+    return {
+        gasPrice,
+    };
+}
+//# sourceMappingURL=estimateFeesPerGas.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/block/formatBlockParameter.js
+var formatBlockParameter = __nccwpck_require__(4570);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getTransactionCount.js
+
+
+/**
+ * Returns the number of [Transactions](https://viem.sh/docs/glossary/terms#transaction) an Account has sent.
+ *
+ * - Docs: https://viem.sh/docs/actions/public/getTransactionCount
+ * - JSON-RPC Methods: [`eth_getTransactionCount`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_gettransactioncount)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link GetTransactionCountParameters}
+ * @returns The number of transactions an account has sent. {@link GetTransactionCountReturnType}
+ *
+ * @example
+ * import { createPublicClient, http } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { getTransactionCount } from 'viem/public'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const transactionCount = await getTransactionCount(client, {
+ *   address: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ * })
+ */
+async function getTransactionCount(client, { address, blockHash, blockNumber, blockTag = 'latest', requireCanonical, }) {
+    const block = (0,formatBlockParameter/* formatBlockParameter */.O)({
+        blockHash,
+        blockNumber,
+        blockTag,
+        requireCanonical,
+    });
+    const count = await client.request({
+        method: 'eth_getTransactionCount',
+        params: [address, block],
+    }, {
+        dedupe: typeof blockNumber === 'bigint' || blockHash !== undefined,
+    });
+    return (0,fromHex/* hexToNumber */.ME)(count);
+}
+//# sourceMappingURL=getTransactionCount.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/blob/blobsToCommitments.js
+
+
+/**
+ * Compute commitments from a list of blobs.
+ *
+ * @example
+ * ```ts
+ * import { blobsToCommitments, toBlobs } from 'viem'
+ * import { kzg } from './kzg'
+ *
+ * const blobs = toBlobs({ data: '0x1234' })
+ * const commitments = blobsToCommitments({ blobs, kzg })
+ * ```
+ */
+function blobsToCommitments(parameters) {
+    const { kzg } = parameters;
+    const to = parameters.to ?? (typeof parameters.blobs[0] === 'string' ? 'hex' : 'bytes');
+    const blobs = (typeof parameters.blobs[0] === 'string'
+        ? parameters.blobs.map((x) => (0,toBytes/* hexToBytes */.aT)(x))
+        : parameters.blobs);
+    const commitments = [];
+    for (const blob of blobs)
+        commitments.push(Uint8Array.from(kzg.blobToKzgCommitment(blob)));
+    return (to === 'bytes'
+        ? commitments
+        : commitments.map((x) => (0,toHex/* bytesToHex */.My)(x)));
+}
+//# sourceMappingURL=blobsToCommitments.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/blob/blobsToProofs.js
+
+
+/**
+ * Compute the proofs for a list of blobs and their commitments.
+ *
+ * @example
+ * ```ts
+ * import {
+ *   blobsToCommitments,
+ *   toBlobs
+ * } from 'viem'
+ * import { kzg } from './kzg'
+ *
+ * const blobs = toBlobs({ data: '0x1234' })
+ * const commitments = blobsToCommitments({ blobs, kzg })
+ * const proofs = blobsToProofs({ blobs, commitments, kzg })
+ * ```
+ */
+function blobsToProofs(parameters) {
+    const { kzg } = parameters;
+    const to = parameters.to ?? (typeof parameters.blobs[0] === 'string' ? 'hex' : 'bytes');
+    const blobs = (typeof parameters.blobs[0] === 'string'
+        ? parameters.blobs.map((x) => (0,toBytes/* hexToBytes */.aT)(x))
+        : parameters.blobs);
+    const commitments = (typeof parameters.commitments[0] === 'string'
+        ? parameters.commitments.map((x) => (0,toBytes/* hexToBytes */.aT)(x))
+        : parameters.commitments);
+    const proofs = [];
+    for (let i = 0; i < blobs.length; i++) {
+        const blob = blobs[i];
+        const commitment = commitments[i];
+        proofs.push(Uint8Array.from(kzg.computeBlobKzgProof(blob, commitment)));
+    }
+    return (to === 'bytes'
+        ? proofs
+        : proofs.map((x) => (0,toHex/* bytesToHex */.My)(x)));
+}
+//# sourceMappingURL=blobsToProofs.js.map
+// EXTERNAL MODULE: ./node_modules/@noble/hashes/esm/sha2.js + 1 modules
+var sha2 = __nccwpck_require__(4640);
+;// CONCATENATED MODULE: ./node_modules/@noble/hashes/esm/sha256.js
+/**
+ * SHA2-256 a.k.a. sha256. In JS, it is the fastest hash, even faster than Blake3.
+ *
+ * To break sha256 using birthday attack, attackers need to try 2^128 hashes.
+ * BTC network is doing 2^70 hashes/sec (2^95 hashes/year) as per 2025.
+ *
+ * Check out [FIPS 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
+ * @module
+ * @deprecated
+ */
+
+/** @deprecated Use import from `noble/hashes/sha2` module */
+const SHA256 = (/* unused pure expression or super */ null && (SHA256n));
+/** @deprecated Use import from `noble/hashes/sha2` module */
+const sha256 = sha2/* sha256 */.sc;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+const SHA224 = (/* unused pure expression or super */ null && (SHA224n));
+/** @deprecated Use import from `noble/hashes/sha2` module */
+const sha224 = (/* unused pure expression or super */ null && (sha224n));
+//# sourceMappingURL=sha256.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/hash/sha256.js
+
+
+
+
+function sha256_sha256(value, to_) {
+    const to = to_ || 'hex';
+    const bytes = sha256((0,isHex/* isHex */.q)(value, { strict: false }) ? (0,toBytes/* toBytes */.ZJ)(value) : value);
+    if (to === 'bytes')
+        return bytes;
+    return (0,toHex/* toHex */.nj)(bytes);
+}
+//# sourceMappingURL=sha256.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/blob/commitmentToVersionedHash.js
+
+
+/**
+ * Transform a commitment to it's versioned hash.
+ *
+ * @example
+ * ```ts
+ * import {
+ *   blobsToCommitments,
+ *   commitmentToVersionedHash,
+ *   toBlobs
+ * } from 'viem'
+ * import { kzg } from './kzg'
+ *
+ * const blobs = toBlobs({ data: '0x1234' })
+ * const [commitment] = blobsToCommitments({ blobs, kzg })
+ * const versionedHash = commitmentToVersionedHash({ commitment })
+ * ```
+ */
+function commitmentToVersionedHash(parameters) {
+    const { commitment, version = 1 } = parameters;
+    const to = parameters.to ?? (typeof commitment === 'string' ? 'hex' : 'bytes');
+    const versionedHash = sha256_sha256(commitment, 'bytes');
+    versionedHash.set([version], 0);
+    return (to === 'bytes' ? versionedHash : (0,toHex/* bytesToHex */.My)(versionedHash));
+}
+//# sourceMappingURL=commitmentToVersionedHash.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/blob/commitmentsToVersionedHashes.js
+
+/**
+ * Transform a list of commitments to their versioned hashes.
+ *
+ * @example
+ * ```ts
+ * import {
+ *   blobsToCommitments,
+ *   commitmentsToVersionedHashes,
+ *   toBlobs
+ * } from 'viem'
+ * import { kzg } from './kzg'
+ *
+ * const blobs = toBlobs({ data: '0x1234' })
+ * const commitments = blobsToCommitments({ blobs, kzg })
+ * const versionedHashes = commitmentsToVersionedHashes({ commitments })
+ * ```
+ */
+function commitmentsToVersionedHashes(parameters) {
+    const { commitments, version } = parameters;
+    const to = parameters.to ?? (typeof commitments[0] === 'string' ? 'hex' : 'bytes');
+    const hashes = [];
+    for (const commitment of commitments) {
+        hashes.push(commitmentToVersionedHash({
+            commitment,
+            to,
+            version,
+        }));
+    }
+    return hashes;
+}
+//# sourceMappingURL=commitmentsToVersionedHashes.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/constants/blob.js
+// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-4844.md#parameters
+/** Blob limit per transaction. */
+const blobsPerTransaction = 6;
+/** The number of bytes in a BLS scalar field element. */
+const bytesPerFieldElement = 32;
+/** The number of field elements in a blob. */
+const fieldElementsPerBlob = 4096;
+/** The number of bytes in a blob. */
+const bytesPerBlob = bytesPerFieldElement * fieldElementsPerBlob;
+/** Blob bytes limit per transaction. */
+const maxBytesPerTransaction = bytesPerBlob * blobsPerTransaction -
+    // terminator byte (0x80).
+    1 -
+    // zero byte (0x00) appended to each field element.
+    1 * fieldElementsPerBlob * blobsPerTransaction;
+//# sourceMappingURL=blob.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/constants/kzg.js
+// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-4844.md#parameters
+const versionedHashVersionKzg = 1;
+//# sourceMappingURL=kzg.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/blob.js
+
+
+class BlobSizeTooLargeError extends base/* BaseError */.C {
+    constructor({ maxSize, size }) {
+        super('Blob size is too large.', {
+            metaMessages: [`Max: ${maxSize} bytes`, `Given: ${size} bytes`],
+            name: 'BlobSizeTooLargeError',
+        });
+    }
+}
+class EmptyBlobError extends base/* BaseError */.C {
+    constructor() {
+        super('Blob data must not be empty.', { name: 'EmptyBlobError' });
+    }
+}
+class InvalidVersionedHashSizeError extends base/* BaseError */.C {
+    constructor({ hash, size, }) {
+        super(`Versioned hash "${hash}" size is invalid.`, {
+            metaMessages: ['Expected: 32', `Received: ${size}`],
+            name: 'InvalidVersionedHashSizeError',
+        });
+    }
+}
+class InvalidVersionedHashVersionError extends base/* BaseError */.C {
+    constructor({ hash, version, }) {
+        super(`Versioned hash "${hash}" version is invalid.`, {
+            metaMessages: [
+                `Expected: ${versionedHashVersionKzg}`,
+                `Received: ${version}`,
+            ],
+            name: 'InvalidVersionedHashVersionError',
+        });
+    }
+}
+//# sourceMappingURL=blob.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/blob/toBlobs.js
+
+
+
+
+
+
+/**
+ * Transforms arbitrary data to blobs.
+ *
+ * @example
+ * ```ts
+ * import { toBlobs, stringToHex } from 'viem'
+ *
+ * const blobs = toBlobs({ data: stringToHex('hello world') })
+ * ```
+ */
+function toBlobs(parameters) {
+    const to = parameters.to ?? (typeof parameters.data === 'string' ? 'hex' : 'bytes');
+    const data = (typeof parameters.data === 'string'
+        ? (0,toBytes/* hexToBytes */.aT)(parameters.data)
+        : parameters.data);
+    const size_ = (0,data_size/* size */.E)(data);
+    if (!size_)
+        throw new EmptyBlobError();
+    if (size_ > maxBytesPerTransaction)
+        throw new BlobSizeTooLargeError({
+            maxSize: maxBytesPerTransaction,
+            size: size_,
+        });
+    const blobs = [];
+    let active = true;
+    let position = 0;
+    while (active) {
+        const blob = (0,utils_cursor/* createCursor */.l)(new Uint8Array(bytesPerBlob));
+        let size = 0;
+        while (size < fieldElementsPerBlob) {
+            const bytes = data.slice(position, position + (bytesPerFieldElement - 1));
+            // Push a zero byte so the field element doesn't overflow the BLS modulus.
+            blob.pushByte(0x00);
+            // Push the current segment of data bytes.
+            blob.pushBytes(bytes);
+            // If we detect that the current segment of data bytes is less than 31 bytes,
+            // we can stop processing and push a terminator byte to indicate the end of the blob.
+            if (bytes.length < 31) {
+                blob.pushByte(0x80);
+                active = false;
+                break;
+            }
+            size++;
+            position += 31;
+        }
+        blobs.push(blob);
+    }
+    return (to === 'bytes'
+        ? blobs.map((x) => x.bytes)
+        : blobs.map((x) => (0,toHex/* bytesToHex */.My)(x.bytes)));
+}
+//# sourceMappingURL=toBlobs.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/blob/toBlobSidecars.js
+
+
+
+/**
+ * Transforms arbitrary data (or blobs, commitments, & proofs) into a sidecar array.
+ *
+ * @example
+ * ```ts
+ * import { toBlobSidecars, stringToHex } from 'viem'
+ *
+ * const sidecars = toBlobSidecars({ data: stringToHex('hello world') })
+ * ```
+ *
+ * @example
+ * ```ts
+ * import {
+ *   blobsToCommitments,
+ *   toBlobs,
+ *   blobsToProofs,
+ *   toBlobSidecars,
+ *   stringToHex
+ * } from 'viem'
+ *
+ * const blobs = toBlobs({ data: stringToHex('hello world') })
+ * const commitments = blobsToCommitments({ blobs, kzg })
+ * const proofs = blobsToProofs({ blobs, commitments, kzg })
+ *
+ * const sidecars = toBlobSidecars({ blobs, commitments, proofs })
+ * ```
+ */
+function toBlobSidecars(parameters) {
+    const { data, kzg, to } = parameters;
+    const blobs = parameters.blobs ?? toBlobs({ data: data, to });
+    const commitments = parameters.commitments ?? blobsToCommitments({ blobs, kzg: kzg, to });
+    const proofs = parameters.proofs ?? blobsToProofs({ blobs, commitments, kzg: kzg, to });
+    const sidecars = [];
+    for (let i = 0; i < blobs.length; i++)
+        sidecars.push({
+            blob: blobs[i],
+            commitment: commitments[i],
+            proof: proofs[i],
+        });
+    return sidecars;
+}
+//# sourceMappingURL=toBlobSidecars.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/lru.js
+var lru = __nccwpck_require__(8718);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/transaction/getTransactionType.js
+
+function getTransactionType(transaction) {
+    if (transaction.type)
+        return transaction.type;
+    if (typeof transaction.authorizationList !== 'undefined')
+        return 'eip7702';
+    if (typeof transaction.blobs !== 'undefined' ||
+        typeof transaction.blobVersionedHashes !== 'undefined' ||
+        typeof transaction.maxFeePerBlobGas !== 'undefined' ||
+        typeof transaction.sidecars !== 'undefined')
+        return 'eip4844';
+    if (typeof transaction.maxFeePerGas !== 'undefined' ||
+        typeof transaction.maxPriorityFeePerGas !== 'undefined') {
+        return 'eip1559';
+    }
+    if (typeof transaction.gasPrice !== 'undefined') {
+        if (typeof transaction.accessList !== 'undefined')
+            return 'eip2930';
+        return 'legacy';
+    }
+    throw new errors_transaction/* InvalidSerializableTransactionError */.Vg({ transaction });
+}
+//# sourceMappingURL=getTransactionType.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/errors/getTransactionError.js
+
+
+
+function getTransactionError(err, { docsPath, ...args }) {
+    const cause = (() => {
+        const cause = (0,getNodeError/* getNodeError */.l)(err, args);
+        if (cause instanceof node/* UnknownNodeError */.RM)
+            return err;
+        return cause;
+    })();
+    return new errors_transaction/* TransactionExecutionError */.$s(cause, {
+        docsPath,
+        ...args,
+    });
+}
+//# sourceMappingURL=getTransactionError.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getChainId.js
+
+/**
+ * Returns the chain ID associated with the current network.
+ *
+ * - Docs: https://viem.sh/docs/actions/public/getChainId
+ * - JSON-RPC Methods: [`eth_chainId`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_chainid)
+ *
+ * @param client - Client to use
+ * @returns The current chain ID. {@link GetChainIdReturnType}
+ *
+ * @example
+ * import { createPublicClient, http } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { getChainId } from 'viem/public'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const chainId = await getChainId(client)
+ * // 1
+ */
+async function getChainId_getChainId(client) {
+    const chainIdHex = await client.request({
+        method: 'eth_chainId',
+    }, { dedupe: true });
+    return (0,fromHex/* hexToNumber */.ME)(chainIdHex);
+}
+//# sourceMappingURL=getChainId.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/fillTransaction.js
+
+
+
+
+
+
+
+
+
+
+/**
+ * Fills a transaction request with the necessary fields to be signed over.
+ *
+ * - Docs: https://viem.sh/docs/actions/public/fillTransaction
+ *
+ * @param client - Client to use
+ * @param parameters - {@link FillTransactionParameters}
+ * @returns The filled transaction. {@link FillTransactionReturnType}
+ *
+ * @example
+ * import { createPublicClient, http } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { fillTransaction } from 'viem/public'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const result = await fillTransaction(client, {
+ *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ *   to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+ *   value: parseEther('1'),
+ * })
+ */
+async function fillTransaction(client, parameters) {
+    const { account = client.account, accessList, authorizationList, chain = client.chain, blobVersionedHashes, blobs, data, gas, gasPrice, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, nonce: nonce_, nonceManager, to, type, value, ...rest } = parameters;
+    const nonce = await (async () => {
+        if (!account)
+            return nonce_;
+        if (!nonceManager)
+            return nonce_;
+        if (typeof nonce_ !== 'undefined')
+            return nonce_;
+        const account_ = (0,parseAccount/* parseAccount */.J)(account);
+        const chainId = chain
+            ? chain.id
+            : await getAction(client, getChainId_getChainId, 'getChainId')({});
+        return await nonceManager.consume({
+            address: account_.address,
+            chainId,
+            client,
+        });
+    })();
+    (0,assertRequest/* assertRequest */.c)(parameters);
+    const chainFormat = chain?.formatters?.transactionRequest?.format;
+    const format = chainFormat || transactionRequest/* formatTransactionRequest */.Bv;
+    const request = format({
+        // Pick out extra data that might exist on the chain's transaction request type.
+        ...(0,extract/* extract */.o)(rest, { format: chainFormat }),
+        account: account ? (0,parseAccount/* parseAccount */.J)(account) : undefined,
+        accessList,
+        authorizationList,
+        blobs,
+        blobVersionedHashes,
+        data,
+        gas,
+        gasPrice,
+        maxFeePerBlobGas,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+        nonce,
+        to,
+        type,
+        value,
+    }, 'fillTransaction');
+    try {
+        const response = await client.request({
+            method: 'eth_fillTransaction',
+            params: [request],
+        });
+        const format = chain?.formatters?.transaction?.format || formatTransaction;
+        const transaction = format(response.tx);
+        // Remove unnecessary fields.
+        delete transaction.blockHash;
+        delete transaction.blockNumber;
+        delete transaction.r;
+        delete transaction.s;
+        delete transaction.transactionIndex;
+        delete transaction.v;
+        delete transaction.yParity;
+        // Rewrite fields.
+        transaction.data = transaction.input;
+        // Preference supplied fees (some nodes do not take these preferences).
+        if (transaction.gas)
+            transaction.gas = parameters.gas ?? transaction.gas;
+        if (transaction.gasPrice)
+            transaction.gasPrice = parameters.gasPrice ?? transaction.gasPrice;
+        if (transaction.maxFeePerBlobGas)
+            transaction.maxFeePerBlobGas =
+                parameters.maxFeePerBlobGas ?? transaction.maxFeePerBlobGas;
+        if (transaction.maxFeePerGas)
+            transaction.maxFeePerGas =
+                parameters.maxFeePerGas ?? transaction.maxFeePerGas;
+        if (transaction.maxPriorityFeePerGas)
+            transaction.maxPriorityFeePerGas =
+                parameters.maxPriorityFeePerGas ?? transaction.maxPriorityFeePerGas;
+        if (typeof transaction.nonce !== 'undefined')
+            transaction.nonce = parameters.nonce ?? transaction.nonce;
+        // Build fee multiplier function.
+        const feeMultiplier = await (async () => {
+            if (typeof chain?.fees?.baseFeeMultiplier === 'function') {
+                const block = await getAction(client, getBlock_getBlock, 'getBlock')({});
+                return chain.fees.baseFeeMultiplier({
+                    block,
+                    client,
+                    request: parameters,
+                });
+            }
+            return chain?.fees?.baseFeeMultiplier ?? 1.2;
+        })();
+        if (feeMultiplier < 1)
+            throw new BaseFeeScalarError();
+        const decimals = feeMultiplier.toString().split('.')[1]?.length ?? 0;
+        const denominator = 10 ** decimals;
+        const multiplyFee = (base) => (base * BigInt(Math.ceil(feeMultiplier * denominator))) /
+            BigInt(denominator);
+        // Apply fee multiplier.
+        if (!transaction.feePayerSignature) {
+            if (transaction.maxFeePerGas && !parameters.maxFeePerGas)
+                transaction.maxFeePerGas = multiplyFee(transaction.maxFeePerGas);
+            if (transaction.gasPrice && !parameters.gasPrice)
+                transaction.gasPrice = multiplyFee(transaction.gasPrice);
+        }
+        return {
+            raw: response.raw,
+            transaction: {
+                from: request.from,
+                ...transaction,
+            },
+            ...(response.capabilities ? { capabilities: response.capabilities } : {}),
+        };
+    }
+    catch (err) {
+        throw getTransactionError(err, {
+            ...parameters,
+            chain: client.chain,
+        });
+    }
+}
+//# sourceMappingURL=fillTransaction.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/prepareTransactionRequest.js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const defaultParameters = [
+    'blobVersionedHashes',
+    'chainId',
+    'fees',
+    'gas',
+    'nonce',
+    'type',
+];
+/** @internal */
+const eip1559NetworkCache = /*#__PURE__*/ new Map();
+/** @internal */
+const supportsFillTransaction = /*#__PURE__*/ new lru/* LruMap */.A(128);
+/**
+ * Prepares a transaction request for signing.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/prepareTransactionRequest
+ *
+ * @param args - {@link PrepareTransactionRequestParameters}
+ * @returns The transaction request. {@link PrepareTransactionRequestReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { prepareTransactionRequest } from 'viem/actions'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const request = await prepareTransactionRequest(client, {
+ *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ *   to: '0x0000000000000000000000000000000000000000',
+ *   value: 1n,
+ * })
+ *
+ * @example
+ * // Account Hoisting
+ * import { createWalletClient, http } from 'viem'
+ * import { privateKeyToAccount } from 'viem/accounts'
+ * import { mainnet } from 'viem/chains'
+ * import { prepareTransactionRequest } from 'viem/actions'
+ *
+ * const client = createWalletClient({
+ *   account: privateKeyToAccount('0x…'),
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const request = await prepareTransactionRequest(client, {
+ *   to: '0x0000000000000000000000000000000000000000',
+ *   value: 1n,
+ * })
+ */
+async function prepareTransactionRequest(client, args) {
+    let request = args;
+    request.account ??= client.account;
+    request.parameters ??= defaultParameters;
+    const { account: account_, chain = client.chain, nonceManager, parameters, } = request;
+    const prepareTransactionRequest = (() => {
+        if (typeof chain?.prepareTransactionRequest === 'function')
+            return {
+                fn: chain.prepareTransactionRequest,
+                runAt: ['beforeFillTransaction'],
+            };
+        if (Array.isArray(chain?.prepareTransactionRequest))
+            return {
+                fn: chain.prepareTransactionRequest[0],
+                runAt: chain.prepareTransactionRequest[1].runAt,
+            };
+        return undefined;
+    })();
+    let chainId;
+    async function getChainId() {
+        if (chainId)
+            return chainId;
+        if (typeof request.chainId !== 'undefined')
+            return request.chainId;
+        if (chain)
+            return chain.id;
+        const chainId_ = await getAction(client, getChainId_getChainId, 'getChainId')({});
+        chainId = chainId_;
+        return chainId;
+    }
+    const account = account_ ? (0,parseAccount/* parseAccount */.J)(account_) : account_;
+    let nonce = request.nonce;
+    if (parameters.includes('nonce') &&
+        typeof nonce === 'undefined' &&
+        account &&
+        nonceManager) {
+        const chainId = await getChainId();
+        nonce = await nonceManager.consume({
+            address: account.address,
+            chainId,
+            client,
+        });
+    }
+    if (prepareTransactionRequest?.fn &&
+        prepareTransactionRequest.runAt?.includes('beforeFillTransaction')) {
+        request = await prepareTransactionRequest.fn({ ...request, chain }, {
+            phase: 'beforeFillTransaction',
+        });
+        nonce ??= request.nonce;
+    }
+    const attemptFill = (() => {
+        // Do not attempt if blobs are provided.
+        if ((parameters.includes('blobVersionedHashes') ||
+            parameters.includes('sidecars')) &&
+            request.kzg &&
+            request.blobs)
+            return false;
+        // Do not attempt if `eth_fillTransaction` is not supported.
+        if (supportsFillTransaction.get(client.uid) === false)
+            return false;
+        // Should attempt `eth_fillTransaction` if "fees" or "gas" are required to be populated,
+        // otherwise, can just use the other individual calls.
+        const shouldAttempt = ['fees', 'gas'].some((parameter) => parameters.includes(parameter));
+        if (!shouldAttempt)
+            return false;
+        // Check if `eth_fillTransaction` needs to be called.
+        if (parameters.includes('chainId') && typeof request.chainId !== 'number')
+            return true;
+        if (parameters.includes('nonce') && typeof nonce !== 'number')
+            return true;
+        if (parameters.includes('fees') &&
+            typeof request.gasPrice !== 'bigint' &&
+            (typeof request.maxFeePerGas !== 'bigint' ||
+                typeof request.maxPriorityFeePerGas !== 'bigint'))
+            return true;
+        if (parameters.includes('gas') && typeof request.gas !== 'bigint')
+            return true;
+        return false;
+    })();
+    const fillResult = attemptFill
+        ? await getAction(client, fillTransaction, 'fillTransaction')({ ...request, nonce })
+            .then((result) => {
+            const { chainId, from, gas, gasPrice, nonce, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, type, ...rest } = result.transaction;
+            supportsFillTransaction.set(client.uid, true);
+            return {
+                ...request,
+                ...(from ? { from } : {}),
+                ...(type && !request.type ? { type } : {}),
+                ...(typeof chainId !== 'undefined' ? { chainId } : {}),
+                ...(typeof gas !== 'undefined' ? { gas } : {}),
+                ...(typeof gasPrice !== 'undefined' ? { gasPrice } : {}),
+                ...(typeof nonce !== 'undefined' ? { nonce } : {}),
+                ...(typeof maxFeePerBlobGas !== 'undefined' &&
+                    request.type !== 'legacy' &&
+                    request.type !== 'eip2930'
+                    ? { maxFeePerBlobGas }
+                    : {}),
+                ...(typeof maxFeePerGas !== 'undefined' &&
+                    request.type !== 'legacy' &&
+                    request.type !== 'eip2930'
+                    ? { maxFeePerGas }
+                    : {}),
+                ...(typeof maxPriorityFeePerGas !== 'undefined' &&
+                    request.type !== 'legacy' &&
+                    request.type !== 'eip2930'
+                    ? { maxPriorityFeePerGas }
+                    : {}),
+                ...('nonceKey' in rest && typeof rest.nonceKey !== 'undefined'
+                    ? { nonceKey: rest.nonceKey }
+                    : {}),
+                ...('keyAuthorization' in rest &&
+                    typeof rest.keyAuthorization !== 'undefined' &&
+                    rest.keyAuthorization !== null &&
+                    !('keyAuthorization' in request)
+                    ? { keyAuthorization: rest.keyAuthorization }
+                    : {}),
+                ...('feePayerSignature' in rest &&
+                    typeof rest.feePayerSignature !== 'undefined' &&
+                    rest.feePayerSignature !== null
+                    ? { feePayerSignature: rest.feePayerSignature }
+                    : {}),
+                ...('feeToken' in rest &&
+                    typeof rest.feeToken !== 'undefined' &&
+                    rest.feeToken !== null &&
+                    !('feeToken' in request)
+                    ? { feeToken: rest.feeToken }
+                    : {}),
+                ...(result.capabilities
+                    ? { _capabilities: result.capabilities }
+                    : {}),
+            };
+        })
+            .catch((e) => {
+            const error = e;
+            if (error.name !== 'TransactionExecutionError')
+                return request;
+            const executionReverted = error.walk?.((e) => {
+                const error = e;
+                return error.name === 'ExecutionRevertedError';
+            });
+            if (executionReverted)
+                throw e;
+            const unsupported = error.walk?.((e) => {
+                const error = e;
+                return (error.name === 'MethodNotFoundRpcError' ||
+                    error.name === 'MethodNotSupportedRpcError' ||
+                    error.message?.includes('eth_fillTransaction is not available'));
+            });
+            if (unsupported)
+                supportsFillTransaction.set(client.uid, false);
+            return request;
+        })
+        : request;
+    nonce ??= fillResult.nonce;
+    request = {
+        ...fillResult,
+        ...(account ? { from: account?.address } : {}),
+        ...(typeof nonce !== 'undefined' ? { nonce } : {}),
+    };
+    const { blobs, gas, kzg, type } = request;
+    if (prepareTransactionRequest?.fn &&
+        prepareTransactionRequest.runAt?.includes('beforeFillParameters')) {
+        request = await prepareTransactionRequest.fn({ ...request, chain }, {
+            phase: 'beforeFillParameters',
+        });
+    }
+    let block;
+    async function getBlock() {
+        if (block)
+            return block;
+        block = await getAction(client, getBlock_getBlock, 'getBlock')({ blockTag: 'latest' });
+        return block;
+    }
+    if (parameters.includes('nonce') &&
+        typeof nonce === 'undefined' &&
+        account &&
+        !nonceManager)
+        request.nonce = await getAction(client, getTransactionCount, 'getTransactionCount')({
+            address: account.address,
+            blockTag: 'pending',
+        });
+    if ((parameters.includes('blobVersionedHashes') ||
+        parameters.includes('sidecars')) &&
+        blobs &&
+        kzg) {
+        const commitments = blobsToCommitments({ blobs, kzg });
+        if (parameters.includes('blobVersionedHashes')) {
+            const versionedHashes = commitmentsToVersionedHashes({
+                commitments,
+                to: 'hex',
+            });
+            request.blobVersionedHashes = versionedHashes;
+        }
+        if (parameters.includes('sidecars')) {
+            const proofs = blobsToProofs({ blobs, commitments, kzg });
+            const sidecars = toBlobSidecars({
+                blobs,
+                commitments,
+                proofs,
+                to: 'hex',
+            });
+            request.sidecars = sidecars;
+        }
+    }
+    if (parameters.includes('chainId'))
+        request.chainId = await getChainId();
+    if ((parameters.includes('fees') || parameters.includes('type')) &&
+        typeof type === 'undefined') {
+        try {
+            request.type = getTransactionType(request);
+        }
+        catch {
+            let isEip1559Network = eip1559NetworkCache.get(client.uid);
+            if (typeof isEip1559Network === 'undefined') {
+                const block = await getBlock();
+                isEip1559Network = typeof block?.baseFeePerGas === 'bigint';
+                eip1559NetworkCache.set(client.uid, isEip1559Network);
+            }
+            request.type = isEip1559Network ? 'eip1559' : 'legacy';
+        }
+    }
+    if (parameters.includes('fees')) {
+        // TODO(4844): derive blob base fees once https://github.com/ethereum/execution-apis/pull/486 is merged.
+        if (request.type !== 'legacy' && request.type !== 'eip2930') {
+            // EIP-1559 fees
+            if (typeof request.maxFeePerGas === 'undefined' ||
+                typeof request.maxPriorityFeePerGas === 'undefined') {
+                const block = await getBlock();
+                const { maxFeePerGas, maxPriorityFeePerGas } = await internal_estimateFeesPerGas(client, {
+                    block: block,
+                    chain,
+                    request: request,
+                });
+                if (typeof request.maxPriorityFeePerGas === 'undefined' &&
+                    request.maxFeePerGas &&
+                    request.maxFeePerGas < maxPriorityFeePerGas)
+                    throw new MaxFeePerGasTooLowError({
+                        maxPriorityFeePerGas,
+                    });
+                request.maxPriorityFeePerGas = maxPriorityFeePerGas;
+                request.maxFeePerGas = maxFeePerGas;
+            }
+        }
+        else {
+            // Legacy fees
+            if (typeof request.maxFeePerGas !== 'undefined' ||
+                typeof request.maxPriorityFeePerGas !== 'undefined')
+                throw new Eip1559FeesNotSupportedError();
+            if (typeof request.gasPrice === 'undefined') {
+                const block = await getBlock();
+                const { gasPrice: gasPrice_ } = await internal_estimateFeesPerGas(client, {
+                    block: block,
+                    chain,
+                    request: request,
+                    type: 'legacy',
+                });
+                request.gasPrice = gasPrice_;
+            }
+        }
+    }
+    if (parameters.includes('gas') && typeof gas === 'undefined')
+        request.gas = await getAction(client, estimateGas, 'estimateGas')({
+            ...request,
+            account,
+            prepare: account?.type === 'local' ? [] : ['blobVersionedHashes'],
+        });
+    if (prepareTransactionRequest?.fn &&
+        prepareTransactionRequest.runAt?.includes('afterFillParameters'))
+        request = await prepareTransactionRequest.fn({ ...request, chain }, {
+            phase: 'afterFillParameters',
+        });
+    (0,assertRequest/* assertRequest */.c)(request);
+    delete request.parameters;
+    return request;
+}
+//# sourceMappingURL=prepareTransactionRequest.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/estimateGas.js
+
+
+
+
+
+
+
+
+
+
+/**
+ * Estimates the gas necessary to complete a transaction without submitting it to the network.
+ *
+ * - Docs: https://viem.sh/docs/actions/public/estimateGas
+ * - JSON-RPC Methods: [`eth_estimateGas`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_estimategas)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link EstimateGasParameters}
+ * @returns The gas estimate (in gas units). {@link EstimateGasReturnType}
+ *
+ * @example
+ * import { createPublicClient, http, parseEther } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { estimateGas } from 'viem/public'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const gasEstimate = await estimateGas(client, {
+ *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ *   to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+ *   value: parseEther('1'),
+ * })
+ */
+async function estimateGas(client, args) {
+    const { account: account_ = client.account, prepare = true } = args;
+    const account = account_ ? (0,parseAccount/* parseAccount */.J)(account_) : undefined;
+    const parameters = (() => {
+        if (Array.isArray(prepare))
+            return prepare;
+        // Some RPC Providers do not compute versioned hashes from blobs. We will need
+        // to compute them.
+        if (account?.type !== 'local')
+            return ['blobVersionedHashes'];
+        return undefined;
+    })();
+    try {
+        const to = await (async () => {
+            // If `to` exists on the parameters, use that.
+            if (args.to)
+                return args.to;
+            // If no `to` exists, and we are sending a EIP-7702 transaction, use the
+            // address of the first authorization in the list.
+            if (args.authorizationList && args.authorizationList.length > 0)
+                return await recoverAuthorizationAddress({
+                    authorization: args.authorizationList[0],
+                }).catch(() => {
+                    throw new base/* BaseError */.C('`to` is required. Could not infer from `authorizationList`');
+                });
+            // Otherwise, we are sending a deployment transaction.
+            return undefined;
+        })();
+        const { accessList, authorizationList, blobs, blobVersionedHashes, blockNumber, blockTag, data, gas, gasPrice, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, nonce, value, stateOverride, ...rest } = prepare
+            ? (await prepareTransactionRequest(client, {
+                ...args,
+                parameters,
+                to,
+            }))
+            : args;
+        // If we get `gas` back from the prepared transaction request, which is
+        // different from the `gas` we provided, it was likely filled by other means
+        // during request preparation (e.g. `eth_fillTransaction` or `chain.transactionRequest.prepare`).
+        // (e.g. `eth_fillTransaction` or `chain.transactionRequest.prepare`).
+        if (gas && args.gas !== gas)
+            return gas;
+        const blockNumberHex = typeof blockNumber === 'bigint' ? (0,toHex/* numberToHex */.cK)(blockNumber) : undefined;
+        const block = blockNumberHex || blockTag;
+        const rpcStateOverride = (0,utils_stateOverride/* serializeStateOverride */.yH)(stateOverride);
+        (0,assertRequest/* assertRequest */.c)(args);
+        const chainFormat = client.chain?.formatters?.transactionRequest?.format;
+        const format = chainFormat || transactionRequest/* formatTransactionRequest */.Bv;
+        const request = format({
+            // Pick out extra data that might exist on the chain's transaction request type.
+            ...(0,extract/* extract */.o)(rest, { format: chainFormat }),
+            account,
+            accessList,
+            authorizationList,
+            blobs,
+            blobVersionedHashes,
+            data,
+            gasPrice,
+            maxFeePerBlobGas,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            nonce,
+            to,
+            value,
+        }, 'estimateGas');
+        return BigInt(await client.request({
+            method: 'eth_estimateGas',
+            params: rpcStateOverride
+                ? [
+                    request,
+                    block ?? client.experimental_blockTag ?? 'latest',
+                    rpcStateOverride,
+                ]
+                : block
+                    ? [request, block]
+                    : [request],
+        }));
+    }
+    catch (err) {
+        throw getEstimateGasError(err, {
+            ...args,
+            account,
+            chain: client.chain,
+        });
+    }
+}
+//# sourceMappingURL=estimateGas.js.map
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/estimateContractGas.js
 
 
@@ -49268,6 +45829,101 @@ async function getBlobBaseFee(client) {
     return BigInt(baseFee);
 }
 //# sourceMappingURL=getBlobBaseFee.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/promise/withCache.js
+/** @internal */
+const promiseCache = /*#__PURE__*/ new Map();
+/** @internal */
+const responseCache = /*#__PURE__*/ new Map();
+function withCache_getCache(cacheKey) {
+    const buildCache = (cacheKey, cache) => ({
+        clear: () => cache.delete(cacheKey),
+        get: () => cache.get(cacheKey),
+        set: (data) => cache.set(cacheKey, data),
+    });
+    const promise = buildCache(cacheKey, promiseCache);
+    const response = buildCache(cacheKey, responseCache);
+    return {
+        clear: () => {
+            promise.clear();
+            response.clear();
+        },
+        promise,
+        response,
+    };
+}
+/**
+ * @description Returns the result of a given promise, and caches the result for
+ * subsequent invocations against a provided cache key.
+ */
+async function withCache(fn, { cacheKey, cacheTime = Number.POSITIVE_INFINITY }) {
+    const cache = withCache_getCache(cacheKey);
+    // If a response exists in the cache, and it's not expired, return it
+    // and do not invoke the promise.
+    // If the max age is 0, the cache is disabled.
+    const response = cache.response.get();
+    if (response && cacheTime > 0) {
+        const age = Date.now() - response.created.getTime();
+        if (age < cacheTime)
+            return response.data;
+    }
+    let promise = cache.promise.get();
+    if (!promise) {
+        promise = fn();
+        // Store the promise in the cache so that subsequent invocations
+        // will wait for the same promise to resolve (deduping).
+        cache.promise.set(promise);
+    }
+    try {
+        const data = await promise;
+        // Store the response in the cache so that subsequent invocations
+        // will return the same response.
+        cache.response.set({ created: new Date(), data });
+        return data;
+    }
+    finally {
+        // Clear the promise cache so that subsequent invocations will
+        // invoke the promise again.
+        cache.promise.clear();
+    }
+}
+//# sourceMappingURL=withCache.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getBlockNumber.js
+
+const cacheKey = (id) => `blockNumber.${id}`;
+/** @internal */
+function getBlockNumberCache(id) {
+    return getCache(cacheKey(id));
+}
+/**
+ * Returns the number of the most recent block seen.
+ *
+ * - Docs: https://viem.sh/docs/actions/public/getBlockNumber
+ * - Examples: https://stackblitz.com/github/wevm/viem/tree/main/examples/blocks_fetching-blocks
+ * - JSON-RPC Methods: [`eth_blockNumber`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_blocknumber)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link GetBlockNumberParameters}
+ * @returns The number of the block. {@link GetBlockNumberReturnType}
+ *
+ * @example
+ * import { createPublicClient, http } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { getBlockNumber } from 'viem/public'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const blockNumber = await getBlockNumber(client)
+ * // 69420n
+ */
+async function getBlockNumber(client, { cacheTime = client.cacheTime } = {}) {
+    const blockNumberHex = await withCache(() => client.request({
+        method: 'eth_blockNumber',
+    }), { cacheKey: cacheKey(client.uid), cacheTime });
+    return BigInt(blockNumberHex);
+}
+//# sourceMappingURL=getBlockNumber.js.map
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getBlockTransactionCount.js
 
 
@@ -49355,6 +46011,28 @@ async function getCode(client, { address, blockHash, blockNumber, blockTag = 'la
     return hex;
 }
 //# sourceMappingURL=getCode.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/address/isAddressEqual.js
+var isAddressEqual = __nccwpck_require__(2538);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/formatters/log.js
+function formatLog(log, { args, eventName, } = {}) {
+    return {
+        ...log,
+        blockHash: log.blockHash ? log.blockHash : null,
+        blockNumber: log.blockNumber ? BigInt(log.blockNumber) : null,
+        blockTimestamp: log.blockTimestamp
+            ? BigInt(log.blockTimestamp)
+            : log.blockTimestamp === null
+                ? null
+                : undefined,
+        logIndex: log.logIndex ? Number(log.logIndex) : null,
+        transactionHash: log.transactionHash ? log.transactionHash : null,
+        transactionIndex: log.transactionIndex
+            ? Number(log.transactionIndex)
+            : null,
+        ...(eventName ? { args, eventName } : {}),
+    };
+}
+//# sourceMappingURL=log.js.map
 // EXTERNAL MODULE: ./node_modules/viem/_esm/errors/cursor.js
 var cursor = __nccwpck_require__(1843);
 // EXTERNAL MODULE: ./node_modules/viem/_esm/utils/abi/decodeAbiParameters.js + 1 modules
@@ -49754,6 +46432,8 @@ async function getContractEvents(client, parameters) {
     });
 }
 //# sourceMappingURL=getContractEvents.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/data/slice.js
+var slice = __nccwpck_require__(6018);
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getDelegation.js
 
 
@@ -50199,6 +46879,74 @@ async function getStorageAt(client, { address, blockHash, blockNumber, blockTag 
     return data;
 }
 //# sourceMappingURL=getStorageAt.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getTransaction.js
+
+
+
+/**
+ * Returns information about a [Transaction](https://viem.sh/docs/glossary/terms#transaction) given a hash or block identifier.
+ *
+ * - Docs: https://viem.sh/docs/actions/public/getTransaction
+ * - Example: https://stackblitz.com/github/wevm/viem/tree/main/examples/transactions_fetching-transactions
+ * - JSON-RPC Methods: [`eth_getTransactionByHash`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getTransactionByHash)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link GetTransactionParameters}
+ * @returns The transaction information. {@link GetTransactionReturnType}
+ *
+ * @example
+ * import { createPublicClient, http } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { getTransaction } from 'viem/public'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const transaction = await getTransaction(client, {
+ *   hash: '0x4ca7ee652d57678f26e887c149ab0735f41de37bcad58c9f6d3ed5824f15b74d',
+ * })
+ */
+async function getTransaction(client, { blockHash, blockNumber, blockTag: blockTag_, hash, index, sender, nonce, }) {
+    const blockTag = blockTag_ || 'latest';
+    const blockNumberHex = blockNumber !== undefined ? (0,toHex/* numberToHex */.cK)(blockNumber) : undefined;
+    let transaction = null;
+    if (hash) {
+        transaction = await client.request({
+            method: 'eth_getTransactionByHash',
+            params: [hash],
+        }, { dedupe: true });
+    }
+    else if (blockHash) {
+        transaction = await client.request({
+            method: 'eth_getTransactionByBlockHashAndIndex',
+            params: [blockHash, (0,toHex/* numberToHex */.cK)(index)],
+        }, { dedupe: true });
+    }
+    else if ((blockNumberHex || blockTag) && typeof index === 'number') {
+        transaction = await client.request({
+            method: 'eth_getTransactionByBlockNumberAndIndex',
+            params: [blockNumberHex || blockTag, (0,toHex/* numberToHex */.cK)(index)],
+        }, { dedupe: Boolean(blockNumberHex) });
+    }
+    else if (sender && typeof nonce === 'number') {
+        transaction = await client.request({
+            method: 'eth_getTransactionBySenderAndNonce',
+            params: [sender, (0,toHex/* numberToHex */.cK)(nonce)],
+        }, { dedupe: true });
+    }
+    if (!transaction)
+        throw new errors_transaction/* TransactionNotFoundError */.Kz({
+            blockHash,
+            blockNumber,
+            blockTag,
+            hash,
+            index,
+        });
+    const format = client.chain?.formatters?.transaction?.format || formatTransaction;
+    return format(transaction, 'getTransaction');
+}
+//# sourceMappingURL=getTransaction.js.map
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getTransactionConfirmations.js
 
 
@@ -50240,6 +46988,94 @@ async function getTransactionConfirmations(client, { hash, transactionReceipt })
     return blockNumber - transactionBlockNumber + 1n;
 }
 //# sourceMappingURL=getTransactionConfirmations.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/formatters/transactionReceipt.js
+
+
+
+
+const receiptStatuses = {
+    '0x0': 'reverted',
+    '0x1': 'success',
+};
+function formatTransactionReceipt(transactionReceipt, _) {
+    const receipt = {
+        ...transactionReceipt,
+        blockNumber: transactionReceipt.blockNumber
+            ? BigInt(transactionReceipt.blockNumber)
+            : null,
+        contractAddress: transactionReceipt.contractAddress
+            ? transactionReceipt.contractAddress
+            : null,
+        cumulativeGasUsed: transactionReceipt.cumulativeGasUsed
+            ? BigInt(transactionReceipt.cumulativeGasUsed)
+            : null,
+        effectiveGasPrice: transactionReceipt.effectiveGasPrice
+            ? BigInt(transactionReceipt.effectiveGasPrice)
+            : null,
+        gasUsed: transactionReceipt.gasUsed
+            ? BigInt(transactionReceipt.gasUsed)
+            : null,
+        logs: transactionReceipt.logs
+            ? transactionReceipt.logs.map((log) => formatLog(log))
+            : null,
+        to: transactionReceipt.to ? transactionReceipt.to : null,
+        transactionIndex: transactionReceipt.transactionIndex
+            ? (0,fromHex/* hexToNumber */.ME)(transactionReceipt.transactionIndex)
+            : null,
+        status: transactionReceipt.status
+            ? receiptStatuses[transactionReceipt.status]
+            : null,
+        type: transactionReceipt.type
+            ? transactionType[transactionReceipt.type] || transactionReceipt.type
+            : null,
+    };
+    if (transactionReceipt.blobGasPrice)
+        receipt.blobGasPrice = BigInt(transactionReceipt.blobGasPrice);
+    if (transactionReceipt.blobGasUsed)
+        receipt.blobGasUsed = BigInt(transactionReceipt.blobGasUsed);
+    return receipt;
+}
+const defineTransactionReceipt = /*#__PURE__*/ defineFormatter('transactionReceipt', formatTransactionReceipt);
+//# sourceMappingURL=transactionReceipt.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/getTransactionReceipt.js
+
+
+/**
+ * Returns the [Transaction Receipt](https://viem.sh/docs/glossary/terms#transaction-receipt) given a [Transaction](https://viem.sh/docs/glossary/terms#transaction) hash.
+ *
+ * - Docs: https://viem.sh/docs/actions/public/getTransactionReceipt
+ * - Example: https://stackblitz.com/github/wevm/viem/tree/main/examples/transactions_fetching-transactions
+ * - JSON-RPC Methods: [`eth_getTransactionReceipt`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_gettransactionreceipt)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link GetTransactionReceiptParameters}
+ * @returns The transaction receipt. {@link GetTransactionReceiptReturnType}
+ *
+ * @example
+ * import { createPublicClient, http } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { getTransactionReceipt } from 'viem/public'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const transactionReceipt = await getTransactionReceipt(client, {
+ *   hash: '0x4ca7ee652d57678f26e887c149ab0735f41de37bcad58c9f6d3ed5824f15b74d',
+ * })
+ */
+async function getTransactionReceipt(client, { hash }) {
+    const receipt = await client.request({
+        method: 'eth_getTransactionReceipt',
+        params: [hash],
+    }, { dedupe: true });
+    if (!receipt)
+        throw new errors_transaction/* TransactionReceiptNotFoundError */.Kc({ hash });
+    const format = client.chain?.formatters?.transactionReceipt?.format ||
+        formatTransactionReceipt;
+    return format(receipt, 'getTransactionReceipt');
+}
+//# sourceMappingURL=getTransactionReceipt.js.map
 // EXTERNAL MODULE: ./node_modules/viem/_esm/constants/contracts.js
 var constants_contracts = __nccwpck_require__(6772);
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/multicall.js
@@ -50603,7 +47439,7 @@ var signatures = __nccwpck_require__(287);
 // EXTERNAL MODULE: ./node_modules/abitype/dist/esm/human-readable/runtime/structs.js + 1 modules
 var runtime_structs = __nccwpck_require__(4822);
 // EXTERNAL MODULE: ./node_modules/abitype/dist/esm/human-readable/runtime/utils.js + 2 modules
-var runtime_utils = __nccwpck_require__(365);
+var utils = __nccwpck_require__(365);
 ;// CONCATENATED MODULE: ./node_modules/abitype/dist/esm/human-readable/parseAbiItem.js
 
 
@@ -50629,7 +47465,7 @@ var runtime_utils = __nccwpck_require__(365);
 function parseAbiItem(signature) {
     let abiItem;
     if (typeof signature === 'string')
-        abiItem = (0,runtime_utils/* parseSignature */.uT)(signature);
+        abiItem = (0,utils/* parseSignature */.uT)(signature);
     else {
         const structs = (0,runtime_structs/* parseStructs */.e)(signature);
         const length = signature.length;
@@ -50637,7 +47473,7 @@ function parseAbiItem(signature) {
             const signature_ = signature[i];
             if ((0,signatures/* isStructSignature */.WL)(signature_))
                 continue;
-            abiItem = (0,runtime_utils/* parseSignature */.uT)(signature_, structs);
+            abiItem = (0,utils/* parseSignature */.uT)(signature_, structs);
             break;
         }
     }
@@ -52524,10 +49360,10 @@ var abiParameter = __nccwpck_require__(8352);
 function parseAbiParameters(params) {
     const abiParameters = [];
     if (typeof params === 'string') {
-        const parameters = (0,runtime_utils/* splitParameters */.NV)(params);
+        const parameters = (0,utils/* splitParameters */.NV)(params);
         const length = parameters.length;
         for (let i = 0; i < length; i++) {
-            abiParameters.push((0,runtime_utils/* parseAbiParameter */.Pj)(parameters[i], { modifiers: signatures/* modifiers */.Dv }));
+            abiParameters.push((0,utils/* parseAbiParameter */.Pj)(parameters[i], { modifiers: signatures/* modifiers */.Dv }));
         }
     }
     else {
@@ -52537,10 +49373,10 @@ function parseAbiParameters(params) {
             const signature = params[i];
             if ((0,signatures/* isStructSignature */.WL)(signature))
                 continue;
-            const parameters = (0,runtime_utils/* splitParameters */.NV)(signature);
+            const parameters = (0,utils/* splitParameters */.NV)(signature);
             const length = parameters.length;
             for (let k = 0; k < length; k++) {
-                abiParameters.push((0,runtime_utils/* parseAbiParameter */.Pj)(parameters[k], { modifiers: signatures/* modifiers */.Dv, structs }));
+                abiParameters.push((0,utils/* parseAbiParameter */.Pj)(parameters[k], { modifiers: signatures/* modifiers */.Dv, structs }));
             }
         }
     }
@@ -56068,6 +52904,8 @@ class SignatureErc8010_InvalidWrappedSignatureError extends Errors/* BaseError *
     }
 }
 //# sourceMappingURL=SignatureErc8010.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/abi/encodeDeployData.js
+var encodeDeployData = __nccwpck_require__(2701);
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/authorization/verifyAuthorization.js
 
 
@@ -56397,6 +53235,161 @@ async function verifyMessage(client, { address, message, factory, factoryData, s
     });
 }
 //# sourceMappingURL=verifyMessage.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/address.js
+var errors_address = __nccwpck_require__(5345);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/stringify.js
+var stringify = __nccwpck_require__(2162);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/typedData.js
+
+
+class InvalidDomainError extends base/* BaseError */.C {
+    constructor({ domain }) {
+        super(`Invalid domain "${(0,stringify/* stringify */.A)(domain)}".`, {
+            metaMessages: ['Must be a valid EIP-712 domain.'],
+        });
+    }
+}
+class InvalidPrimaryTypeError extends base/* BaseError */.C {
+    constructor({ primaryType, types, }) {
+        super(`Invalid primary type \`${primaryType}\` must be one of \`${JSON.stringify(Object.keys(types))}\`.`, {
+            docsPath: '/api/glossary/Errors#typeddatainvalidprimarytypeerror',
+            metaMessages: ['Check that the primary type is a key in `types`.'],
+        });
+    }
+}
+class InvalidStructTypeError extends base/* BaseError */.C {
+    constructor({ type }) {
+        super(`Struct type "${type}" is invalid.`, {
+            metaMessages: ['Struct type must not be a Solidity type.'],
+            name: 'InvalidStructTypeError',
+        });
+    }
+}
+//# sourceMappingURL=typedData.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/address/isAddress.js
+var isAddress = __nccwpck_require__(9936);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/regex.js
+var regex = __nccwpck_require__(3756);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/typedData.js
+
+
+
+
+
+
+
+
+
+function serializeTypedData(parameters) {
+    const { domain: domain_, message: message_, primaryType, types, } = parameters;
+    const normalizeData = (struct, data_) => {
+        const data = { ...data_ };
+        for (const param of struct) {
+            const { name, type } = param;
+            if (type === 'address')
+                data[name] = data[name].toLowerCase();
+        }
+        return data;
+    };
+    const domain = (() => {
+        if (!types.EIP712Domain)
+            return {};
+        if (!domain_)
+            return {};
+        return normalizeData(types.EIP712Domain, domain_);
+    })();
+    const message = (() => {
+        if (primaryType === 'EIP712Domain')
+            return undefined;
+        return normalizeData(types[primaryType], message_);
+    })();
+    return (0,stringify/* stringify */.A)({ domain, message, primaryType, types });
+}
+function validateTypedData(parameters) {
+    const { domain, message, primaryType, types } = parameters;
+    const validateData = (struct, data) => {
+        for (const param of struct) {
+            const { name, type } = param;
+            const value = data[name];
+            const integerMatch = type.match(regex/* integerRegex */.Ge);
+            if (integerMatch &&
+                (typeof value === 'number' || typeof value === 'bigint')) {
+                const [_type, base, size_] = integerMatch;
+                // If number cannot be cast to a sized hex value, it is out of range
+                // and will throw.
+                (0,toHex/* numberToHex */.cK)(value, {
+                    signed: base === 'int',
+                    size: Number.parseInt(size_, 10) / 8,
+                });
+            }
+            if (type === 'address' && typeof value === 'string' && !(0,isAddress/* isAddress */.P)(value))
+                throw new errors_address/* InvalidAddressError */.M({ address: value });
+            const bytesMatch = type.match(regex/* bytesRegex */.BD);
+            if (bytesMatch) {
+                const [_type, size_] = bytesMatch;
+                if (size_ && (0,data_size/* size */.E)(value) !== Number.parseInt(size_, 10))
+                    throw new errors_abi/* BytesSizeMismatchError */.BI({
+                        expectedSize: Number.parseInt(size_, 10),
+                        givenSize: (0,data_size/* size */.E)(value),
+                    });
+            }
+            const struct = types[type];
+            if (struct) {
+                validateReference(type);
+                validateData(struct, value);
+            }
+        }
+    };
+    // Validate domain types.
+    if (types.EIP712Domain && domain) {
+        if (typeof domain !== 'object')
+            throw new InvalidDomainError({ domain });
+        validateData(types.EIP712Domain, domain);
+    }
+    // Validate message types.
+    if (primaryType !== 'EIP712Domain') {
+        if (types[primaryType])
+            validateData(types[primaryType], message);
+        else
+            throw new InvalidPrimaryTypeError({ primaryType, types });
+    }
+}
+function getTypesForEIP712Domain({ domain, }) {
+    return [
+        typeof domain?.name === 'string' && { name: 'name', type: 'string' },
+        domain?.version && { name: 'version', type: 'string' },
+        (typeof domain?.chainId === 'number' ||
+            typeof domain?.chainId === 'bigint') && {
+            name: 'chainId',
+            type: 'uint256',
+        },
+        domain?.verifyingContract && {
+            name: 'verifyingContract',
+            type: 'address',
+        },
+        domain?.salt && { name: 'salt', type: 'bytes32' },
+    ].filter(Boolean);
+}
+function domainSeparator({ domain }) {
+    return hashDomain({
+        domain: domain,
+        types: {
+            EIP712Domain: getTypesForEIP712Domain({ domain }),
+        },
+    });
+}
+/** @internal */
+function validateReference(type) {
+    // Struct type must not be a Solidity type.
+    if (type === 'address' ||
+        type === 'bool' ||
+        type === 'string' ||
+        type.startsWith('bytes') ||
+        type.startsWith('uint') ||
+        type.startsWith('int'))
+        throw new InvalidStructTypeError({ type });
+}
+//# sourceMappingURL=typedData.js.map
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/signature/hashTypedData.js
 // Implementation forked and adapted from https://github.com/MetaMask/eth-sig-util/blob/main/src/sign-typed-data.ts
 
@@ -56543,6 +53536,505 @@ async function verifyTypedData(client, parameters) {
     });
 }
 //# sourceMappingURL=verifyTypedData.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/observe.js
+/** @internal */
+const listenersCache = /*#__PURE__*/ new Map();
+/** @internal */
+const cleanupCache = /*#__PURE__*/ new Map();
+let callbackCount = 0;
+/**
+ * @description Sets up an observer for a given function. If another function
+ * is set up under the same observer id, the function will only be called once
+ * for both instances of the observer.
+ */
+function observe(observerId, callbacks, fn) {
+    const callbackId = ++callbackCount;
+    const getListeners = () => listenersCache.get(observerId) || [];
+    const unsubscribe = () => {
+        const listeners = getListeners();
+        const nextListeners = listeners.filter((cb) => cb.id !== callbackId);
+        if (nextListeners.length === 0) {
+            listenersCache.delete(observerId);
+            cleanupCache.delete(observerId);
+            return;
+        }
+        listenersCache.set(observerId, nextListeners);
+    };
+    const unwatch = () => {
+        const listeners = getListeners();
+        if (!listeners.some((cb) => cb.id === callbackId))
+            return;
+        const cleanup = cleanupCache.get(observerId);
+        if (listeners.length === 1 && cleanup) {
+            const p = cleanup();
+            if (p instanceof Promise)
+                p.catch(() => { });
+        }
+        unsubscribe();
+    };
+    const listeners = getListeners();
+    listenersCache.set(observerId, [
+        ...listeners,
+        { id: callbackId, fns: callbacks },
+    ]);
+    if (listeners && listeners.length > 0)
+        return unwatch;
+    const emit = {};
+    for (const key in callbacks) {
+        emit[key] = ((...args) => {
+            const listeners = getListeners();
+            if (listeners.length === 0)
+                return;
+            for (const listener of listeners)
+                listener.fns[key]?.(...args);
+        });
+    }
+    const cleanup = fn(emit);
+    if (typeof cleanup === 'function')
+        cleanupCache.set(observerId, cleanup);
+    return unwatch;
+}
+//# sourceMappingURL=observe.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/promise/withResolvers.js
+var withResolvers = __nccwpck_require__(1078);
+// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/utils.js
+var errors_utils = __nccwpck_require__(8400);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/wait.js
+
+async function wait(time, { signal } = {}) {
+    return new Promise((resolve, reject) => {
+        if (signal?.aborted) {
+            reject((0,errors_utils/* getAbortError */.TY)(signal));
+            return;
+        }
+        const cleanup = () => signal?.removeEventListener('abort', onAbort);
+        const timeout = setTimeout(() => {
+            cleanup();
+            resolve();
+        }, time);
+        const onAbort = () => {
+            clearTimeout(timeout);
+            cleanup();
+            reject((0,errors_utils/* getAbortError */.TY)(signal));
+        };
+        signal?.addEventListener('abort', onAbort, { once: true });
+    });
+}
+//# sourceMappingURL=wait.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/promise/withRetry.js
+
+
+function withRetry(fn, { delay: delay_ = 100, retryCount = 2, shouldRetry = () => true, signal, } = {}) {
+    return new Promise((resolve, reject) => {
+        const attemptRetry = async ({ count = 0 } = {}) => {
+            if (signal?.aborted) {
+                reject((0,errors_utils/* getAbortError */.TY)(signal));
+                return;
+            }
+            const retry = async ({ error }) => {
+                const delay = typeof delay_ === 'function' ? delay_({ count, error }) : delay_;
+                if (delay) {
+                    try {
+                        await wait(delay, { signal });
+                    }
+                    catch (err) {
+                        reject(err);
+                        return;
+                    }
+                }
+                attemptRetry({ count: count + 1 });
+            };
+            try {
+                const data = await fn();
+                resolve(data);
+            }
+            catch (err) {
+                if (signal?.aborted) {
+                    reject((0,errors_utils/* getAbortError */.TY)(signal));
+                    return;
+                }
+                if ((0,errors_utils/* isAbortError */.zf)(err)) {
+                    reject(err);
+                    return;
+                }
+                if (count < retryCount &&
+                    (await shouldRetry({ count, error: err })))
+                    return retry({ error: err });
+                reject(err);
+            }
+        };
+        attemptRetry();
+    });
+}
+//# sourceMappingURL=withRetry.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/poll.js
+
+/**
+ * @description Polls a function at a specified interval.
+ */
+function poll(fn, { emitOnBegin, initialWaitTime, interval }) {
+    let active = true;
+    const unwatch = () => (active = false);
+    const watch = async () => {
+        let data;
+        if (emitOnBegin)
+            data = await fn({ unpoll: unwatch });
+        const initialWait = (await initialWaitTime?.(data)) ?? interval;
+        await wait(initialWait);
+        const poll = async () => {
+            if (!active)
+                return;
+            await fn({ unpoll: unwatch });
+            await wait(interval);
+            poll();
+        };
+        poll();
+    };
+    watch();
+    return unwatch;
+}
+//# sourceMappingURL=poll.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/watchBlockNumber.js
+
+
+
+
+
+
+/**
+ * Watches and returns incoming block numbers.
+ *
+ * - Docs: https://viem.sh/docs/actions/public/watchBlockNumber
+ * - Examples: https://stackblitz.com/github/wevm/viem/tree/main/examples/blocks_watching-blocks
+ * - JSON-RPC Methods:
+ *   - When `poll: true`, calls [`eth_blockNumber`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_blocknumber) on a polling interval.
+ *   - When `poll: false` & WebSocket Transport, uses a WebSocket subscription via [`eth_subscribe`](https://docs.alchemy.com/reference/eth-subscribe-polygon) and the `"newHeads"` event.
+ *
+ * @param client - Client to use
+ * @param parameters - {@link WatchBlockNumberParameters}
+ * @returns A function that can be invoked to stop watching for new block numbers. {@link WatchBlockNumberReturnType}
+ *
+ * @example
+ * import { createPublicClient, watchBlockNumber, http } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const unwatch = watchBlockNumber(client, {
+ *   onBlockNumber: (blockNumber) => console.log(blockNumber),
+ * })
+ */
+function watchBlockNumber(client, { emitOnBegin = false, emitMissed = false, onBlockNumber, onError, poll: poll_, pollingInterval = client.pollingInterval, }) {
+    const enablePolling = (() => {
+        if (typeof poll_ !== 'undefined')
+            return poll_;
+        if (client.transport.type === 'webSocket' ||
+            client.transport.type === 'ipc')
+            return false;
+        if (client.transport.type === 'fallback' &&
+            (client.transport.transports[0].config.type === 'webSocket' ||
+                client.transport.transports[0].config.type === 'ipc'))
+            return false;
+        return true;
+    })();
+    let prevBlockNumber;
+    const pollBlockNumber = () => {
+        const observerId = (0,stringify/* stringify */.A)([
+            'watchBlockNumber',
+            client.uid,
+            emitOnBegin,
+            emitMissed,
+            pollingInterval,
+        ]);
+        return observe(observerId, { onBlockNumber, onError }, (emit) => poll(async () => {
+            try {
+                const blockNumber = await getAction(client, getBlockNumber, 'getBlockNumber')({ cacheTime: 0 });
+                if (prevBlockNumber !== undefined) {
+                    // If the current block number is the same as the previous,
+                    // we can skip.
+                    if (blockNumber === prevBlockNumber)
+                        return;
+                    // If we have missed out on some previous blocks, and the
+                    // `emitMissed` flag is truthy, let's emit those blocks.
+                    if (blockNumber - prevBlockNumber > 1 && emitMissed) {
+                        for (let i = prevBlockNumber + 1n; i < blockNumber; i++) {
+                            emit.onBlockNumber(i, prevBlockNumber);
+                            prevBlockNumber = i;
+                        }
+                    }
+                }
+                // If the next block number is greater than the previous,
+                // it is not in the past, and we can emit the new block number.
+                if (prevBlockNumber === undefined ||
+                    blockNumber > prevBlockNumber) {
+                    emit.onBlockNumber(blockNumber, prevBlockNumber);
+                    prevBlockNumber = blockNumber;
+                }
+            }
+            catch (err) {
+                emit.onError?.(err);
+            }
+        }, {
+            emitOnBegin,
+            interval: pollingInterval,
+        }));
+    };
+    const subscribeBlockNumber = () => {
+        const observerId = (0,stringify/* stringify */.A)([
+            'watchBlockNumber',
+            client.uid,
+            emitOnBegin,
+            emitMissed,
+        ]);
+        return observe(observerId, { onBlockNumber, onError }, (emit) => {
+            let active = true;
+            let unsubscribe = () => (active = false);
+            (async () => {
+                try {
+                    const transport = (() => {
+                        if (client.transport.type === 'fallback') {
+                            const transport = client.transport.transports.find((transport) => transport.config.type === 'webSocket' ||
+                                transport.config.type === 'ipc');
+                            if (!transport)
+                                return client.transport;
+                            return transport.value;
+                        }
+                        return client.transport;
+                    })();
+                    const { unsubscribe: unsubscribe_ } = await transport.subscribe({
+                        params: ['newHeads'],
+                        onData(data) {
+                            if (!active)
+                                return;
+                            const blockNumber = (0,fromHex/* hexToBigInt */.uU)(data.result?.number);
+                            emit.onBlockNumber(blockNumber, prevBlockNumber);
+                            prevBlockNumber = blockNumber;
+                        },
+                        onError(error) {
+                            emit.onError?.(error);
+                        },
+                    });
+                    unsubscribe = unsubscribe_;
+                    if (!active)
+                        unsubscribe();
+                }
+                catch (err) {
+                    onError?.(err);
+                }
+            })();
+            return () => unsubscribe();
+        });
+    };
+    return enablePolling ? pollBlockNumber() : subscribeBlockNumber();
+}
+//# sourceMappingURL=watchBlockNumber.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/waitForTransactionReceipt.js
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Waits for the [Transaction](https://viem.sh/docs/glossary/terms#transaction) to be included on a [Block](https://viem.sh/docs/glossary/terms#block) (one confirmation), and then returns the [Transaction Receipt](https://viem.sh/docs/glossary/terms#transaction-receipt).
+ *
+ * - Docs: https://viem.sh/docs/actions/public/waitForTransactionReceipt
+ * - Example: https://stackblitz.com/github/wevm/viem/tree/main/examples/transactions_sending-transactions
+ * - JSON-RPC Methods:
+ *   - Polls [`eth_getTransactionReceipt`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getTransactionReceipt) on each block until it has been processed.
+ *   - If a Transaction has been replaced:
+ *     - Calls [`eth_getBlockByNumber`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getblockbynumber) and extracts the transactions
+ *     - Checks if one of the Transactions is a replacement
+ *     - If so, calls [`eth_getTransactionReceipt`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getTransactionReceipt).
+ *
+ * The `waitForTransactionReceipt` action additionally supports Replacement detection (e.g. sped up Transactions).
+ *
+ * Transactions can be replaced when a user modifies their transaction in their wallet (to speed up or cancel). Transactions are replaced when they are sent from the same nonce.
+ *
+ * There are 3 types of Transaction Replacement reasons:
+ *
+ * - `repriced`: The gas price has been modified (e.g. different `maxFeePerGas`)
+ * - `cancelled`: The Transaction has been cancelled (e.g. `value === 0n`)
+ * - `replaced`: The Transaction has been replaced (e.g. different `value` or `data`)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link WaitForTransactionReceiptParameters}
+ * @returns The transaction receipt. {@link WaitForTransactionReceiptReturnType}
+ *
+ * @example
+ * import { createPublicClient, waitForTransactionReceipt, http } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ *
+ * const client = createPublicClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const transactionReceipt = await waitForTransactionReceipt(client, {
+ *   hash: '0x4ca7ee652d57678f26e887c149ab0735f41de37bcad58c9f6d3ed5824f15b74d',
+ * })
+ */
+async function waitForTransactionReceipt(client, parameters) {
+    const { checkReplacement = true, confirmations = 1, hash, onReplaced, retryCount = 6, retryDelay = ({ count }) => ~~(1 << count) * 200, // exponential backoff
+    timeout = 180_000, } = parameters;
+    const observerId = (0,stringify/* stringify */.A)(['waitForTransactionReceipt', client.uid, hash]);
+    const pollingInterval = (() => {
+        if (parameters.pollingInterval)
+            return parameters.pollingInterval;
+        if (client.chain?.experimental_preconfirmationTime)
+            return client.chain.experimental_preconfirmationTime;
+        return client.pollingInterval;
+    })();
+    let transaction;
+    let replacedTransaction;
+    let receipt;
+    let retrying = false;
+    let _unobserve;
+    let _unwatch;
+    const { promise, resolve, reject } = (0,withResolvers/* withResolvers */.Y)();
+    const timer = timeout
+        ? setTimeout(() => {
+            _unwatch?.();
+            _unobserve?.();
+            reject(new errors_transaction/* WaitForTransactionReceiptTimeoutError */.WA({ hash }));
+        }, timeout)
+        : undefined;
+    _unobserve = observe(observerId, { onReplaced, resolve, reject }, async (emit) => {
+        receipt = await getAction(client, getTransactionReceipt, 'getTransactionReceipt')({ hash }).catch(() => undefined);
+        if (receipt && confirmations <= 1) {
+            clearTimeout(timer);
+            emit.resolve(receipt);
+            _unobserve?.();
+            return;
+        }
+        _unwatch = getAction(client, watchBlockNumber, 'watchBlockNumber')({
+            emitMissed: true,
+            emitOnBegin: true,
+            poll: true,
+            pollingInterval,
+            async onBlockNumber(blockNumber_) {
+                const done = (fn) => {
+                    clearTimeout(timer);
+                    _unwatch?.();
+                    fn();
+                    _unobserve?.();
+                };
+                let blockNumber = blockNumber_;
+                if (retrying)
+                    return;
+                try {
+                    // If we already have a valid receipt, let's check if we have enough
+                    // confirmations. If we do, then we can resolve.
+                    if (receipt) {
+                        if (confirmations > 1 &&
+                            (!receipt.blockNumber ||
+                                blockNumber - receipt.blockNumber + 1n < confirmations))
+                            return;
+                        done(() => emit.resolve(receipt));
+                        return;
+                    }
+                    // Get the transaction to check if it's been replaced.
+                    // We need to retry as some RPC Providers may be slow to sync
+                    // up mined transactions.
+                    if (checkReplacement && !transaction) {
+                        retrying = true;
+                        await withRetry(async () => {
+                            transaction = (await getAction(client, getTransaction, 'getTransaction')({ hash }));
+                            if (transaction.blockNumber)
+                                blockNumber = transaction.blockNumber;
+                        }, {
+                            delay: retryDelay,
+                            retryCount,
+                        });
+                        retrying = false;
+                    }
+                    // Get the receipt to check if it's been processed.
+                    receipt = await getAction(client, getTransactionReceipt, 'getTransactionReceipt')({ hash });
+                    // Check if we have enough confirmations. If not, continue polling.
+                    if (confirmations > 1 &&
+                        (!receipt.blockNumber ||
+                            blockNumber - receipt.blockNumber + 1n < confirmations))
+                        return;
+                    done(() => emit.resolve(receipt));
+                }
+                catch (err) {
+                    // If the receipt is not found, the transaction will be pending.
+                    // We need to check if it has potentially been replaced.
+                    if (err instanceof errors_transaction/* TransactionNotFoundError */.Kz ||
+                        err instanceof errors_transaction/* TransactionReceiptNotFoundError */.Kc) {
+                        if (!transaction) {
+                            retrying = false;
+                            return;
+                        }
+                        try {
+                            replacedTransaction = transaction;
+                            // Let's retrieve the transactions from the current block.
+                            // We need to retry as some RPC Providers may be slow to sync
+                            // up mined blocks.
+                            retrying = true;
+                            const block = await withRetry(() => getAction(client, getBlock_getBlock, 'getBlock')({
+                                blockNumber,
+                                includeTransactions: true,
+                            }), {
+                                delay: retryDelay,
+                                retryCount,
+                                shouldRetry: ({ error }) => error instanceof BlockNotFoundError,
+                            });
+                            retrying = false;
+                            const replacementTransaction = block.transactions.find(({ from, nonce }) => from === replacedTransaction.from &&
+                                nonce === replacedTransaction.nonce);
+                            // If we couldn't find a replacement transaction, continue polling.
+                            if (!replacementTransaction)
+                                return;
+                            // If we found a replacement transaction, return it's receipt.
+                            receipt = await getAction(client, getTransactionReceipt, 'getTransactionReceipt')({
+                                hash: replacementTransaction.hash,
+                            });
+                            // Check if we have enough confirmations. If not, continue polling.
+                            if (confirmations > 1 &&
+                                (!receipt.blockNumber ||
+                                    blockNumber - receipt.blockNumber + 1n < confirmations))
+                                return;
+                            let reason = 'replaced';
+                            if (replacementTransaction.to === replacedTransaction.to &&
+                                replacementTransaction.value === replacedTransaction.value &&
+                                replacementTransaction.input === replacedTransaction.input) {
+                                reason = 'repriced';
+                            }
+                            else if (replacementTransaction.from === replacementTransaction.to &&
+                                replacementTransaction.value === 0n) {
+                                reason = 'cancelled';
+                            }
+                            done(() => {
+                                emit.onReplaced?.({
+                                    reason,
+                                    replacedTransaction: replacedTransaction,
+                                    transaction: replacementTransaction,
+                                    transactionReceipt: receipt,
+                                });
+                                emit.resolve(receipt);
+                            });
+                        }
+                        catch (err_) {
+                            done(() => emit.reject(err_));
+                        }
+                    }
+                    else {
+                        done(() => emit.reject(err));
+                    }
+                }
+            },
+        });
+    });
+    return promise;
+}
+//# sourceMappingURL=waitForTransactionReceipt.js.map
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/public/watchBlocks.js
 
 
@@ -57400,6 +54892,81 @@ async function verifySiweMessage(client, parameters) {
     });
 }
 //# sourceMappingURL=verifySiweMessage.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/sendRawTransaction.js
+/**
+ * Sends a **signed** transaction to the network
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/sendRawTransaction
+ * - JSON-RPC Method: [`eth_sendRawTransaction`](https://ethereum.github.io/execution-apis/api-documentation/)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link SendRawTransactionParameters}
+ * @returns The transaction hash. {@link SendRawTransactionReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { sendRawTransaction } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ *
+ * const hash = await sendRawTransaction(client, {
+ *   serializedTransaction: '0x02f850018203118080825208808080c080a04012522854168b27e5dc3d5839bab5e6b39e1a0ffd343901ce1622e3d64b48f1a04e00902ae0502c4728cbf12156290df99c3ed7de85b1dbfe20b5c36931733a33'
+ * })
+ */
+async function sendRawTransaction(client, { serializedTransaction }) {
+    return client.request({
+        method: 'eth_sendRawTransaction',
+        params: [serializedTransaction],
+    }, { retryCount: 0 });
+}
+//# sourceMappingURL=sendRawTransaction.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/sendRawTransactionSync.js
+
+
+/**
+ * Sends a **signed** transaction to the network synchronously,
+ * and waits for the transaction to be included in a block.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/sendRawTransactionSync
+ * - JSON-RPC Method: [`eth_sendRawTransactionSync`](https://eips.ethereum.org/EIPS/eip-7966)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link SendRawTransactionParameters}
+ * @returns The transaction receipt. {@link SendRawTransactionSyncReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { sendRawTransactionSync } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ *
+ * const receipt = await sendRawTransactionSync(client, {
+ *   serializedTransaction: '0x02f850018203118080825208808080c080a04012522854168b27e5dc3d5839bab5e6b39e1a0ffd343901ce1622e3d64b48f1a04e00902ae0502c4728cbf12156290df99c3ed7de85b1dbfe20b5c36931733a33'
+ * })
+ */
+async function sendRawTransactionSync(client, { serializedTransaction, throwOnReceiptRevert, timeout, }) {
+    const receipt = await client.request({
+        method: 'eth_sendRawTransactionSync',
+        params: timeout
+            ? [serializedTransaction, timeout]
+            : [serializedTransaction],
+    }, { retryCount: 0 });
+    const format = client.chain?.formatters?.transactionReceipt?.format ||
+        formatTransactionReceipt;
+    const formatted = format(receipt);
+    if (formatted.status === 'reverted' && throwOnReceiptRevert)
+        throw new errors_transaction/* TransactionReceiptRevertedError */.Sq({ receipt: formatted });
+    return formatted;
+}
+//# sourceMappingURL=sendRawTransactionSync.js.map
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/clients/decorators/public.js
 
 
@@ -57553,6 +55120,2455 @@ function createPublicClient(parameters) {
     return client.extend(publicActions);
 }
 //# sourceMappingURL=createPublicClient.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/transport.js
+
+class UrlRequiredError extends base/* BaseError */.C {
+    constructor() {
+        super('No URL was provided to the Transport. Please provide a valid RPC URL to the Transport.', {
+            docsPath: '/docs/clients/intro',
+            name: 'UrlRequiredError',
+        });
+    }
+}
+//# sourceMappingURL=transport.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/utils/promise/createBatchScheduler.js
+var createBatchScheduler = __nccwpck_require__(7940);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/promise/withTimeout.js
+
+function withTimeout(fn, { errorInstance = new Error('timed out'), timeout, signal, }) {
+    return new Promise((resolve, reject) => {
+        ;
+        (async () => {
+            let timeoutId;
+            const controller = new AbortController();
+            try {
+                if (timeout > 0) {
+                    timeoutId = setTimeout(() => {
+                        if (signal) {
+                            controller.abort();
+                        }
+                        else {
+                            reject(errorInstance);
+                        }
+                    }, timeout); // need to cast because bun globals.d.ts overrides @types/node
+                }
+                resolve(await fn({ signal: controller?.signal || null }));
+            }
+            catch (err) {
+                if (controller?.signal.aborted && (0,errors_utils/* isAbortError */.zf)(err)) {
+                    reject(errorInstance);
+                    return;
+                }
+                reject(err);
+            }
+            finally {
+                clearTimeout(timeoutId);
+            }
+        })();
+    });
+}
+//# sourceMappingURL=withTimeout.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/rpc/id.js
+function createIdStore() {
+    return {
+        current: 0,
+        take() {
+            return this.current++;
+        },
+        reset() {
+            this.current = 0;
+        },
+    };
+}
+const idCache = /*#__PURE__*/ createIdStore();
+//# sourceMappingURL=id.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/rpc/http.js
+
+
+
+
+
+function getHttpRpcClient(url_, options = {}) {
+    const { url, headers: headers_url } = parseUrl(url_);
+    return {
+        async request(params) {
+            const { body, fetchFn = options.fetchFn ?? fetch, onRequest = options.onRequest, onResponse = options.onResponse, timeout = options.timeout ?? 10_000, } = params;
+            const fetchOptions = {
+                ...(options.fetchOptions ?? {}),
+                ...(params.fetchOptions ?? {}),
+            };
+            const { headers, method, signal: signal_ } = fetchOptions;
+            try {
+                const response = await withTimeout(async ({ signal }) => {
+                    const init = {
+                        ...fetchOptions,
+                        body: Array.isArray(body)
+                            ? (0,stringify/* stringify */.A)(body.map((body) => ({
+                                jsonrpc: '2.0',
+                                id: body.id ?? idCache.take(),
+                                ...body,
+                            })))
+                            : (0,stringify/* stringify */.A)({
+                                jsonrpc: '2.0',
+                                id: body.id ?? idCache.take(),
+                                ...body,
+                            }),
+                        headers: {
+                            ...headers_url,
+                            'Content-Type': 'application/json',
+                            ...headers,
+                        },
+                        method: method || 'POST',
+                        signal: signal_ || (timeout > 0 ? signal : null),
+                    };
+                    const request = new Request(url, init);
+                    const args = (await onRequest?.(request, init)) ?? { ...init, url };
+                    const response = await fetchFn(args.url ?? url, args);
+                    return response;
+                }, {
+                    errorInstance: new errors_request/* TimeoutError */.MU({ body, url }),
+                    timeout,
+                    signal: true,
+                });
+                if (onResponse)
+                    await onResponse(response);
+                let data;
+                if (response.headers.get('Content-Type')?.startsWith('application/json'))
+                    data = await response.json();
+                else {
+                    data = await response.text();
+                    try {
+                        data = JSON.parse(data || '{}');
+                    }
+                    catch (err) {
+                        if (response.ok)
+                            throw err;
+                        data = { error: data };
+                    }
+                }
+                if (!response.ok) {
+                    // If the response body contains a valid JSON-RPC error, return it
+                    // so it flows through the normal RPC error handling pipeline.
+                    if (typeof data.error?.code === 'number' &&
+                        typeof data.error?.message === 'string')
+                        return data;
+                    throw new errors_request/* HttpRequestError */.Ci({
+                        body,
+                        details: (0,stringify/* stringify */.A)(data.error) || response.statusText,
+                        headers: response.headers,
+                        status: response.status,
+                        url,
+                    });
+                }
+                return data;
+            }
+            catch (err) {
+                if (signal_?.aborted)
+                    throw (0,errors_utils/* getAbortError */.TY)(signal_);
+                if ((0,errors_utils/* isAbortError */.zf)(err))
+                    throw err;
+                if (err instanceof errors_request/* HttpRequestError */.Ci)
+                    throw err;
+                if (err instanceof errors_request/* TimeoutError */.MU)
+                    throw err;
+                throw new errors_request/* HttpRequestError */.Ci({
+                    body,
+                    cause: err,
+                    url,
+                });
+            }
+        },
+    };
+}
+/** @internal */
+function parseUrl(url_) {
+    try {
+        const url = new URL(url_);
+        const result = (() => {
+            // Handle Basic authentication credentials
+            if (url.username) {
+                const credentials = `${decodeURIComponent(url.username)}:${decodeURIComponent(url.password)}`;
+                url.username = '';
+                url.password = '';
+                return {
+                    url: url.toString(),
+                    headers: { Authorization: `Basic ${btoa(credentials)}` },
+                };
+            }
+            return;
+        })();
+        return { url: url.toString(), ...result };
+    }
+    catch {
+        return { url: url_ };
+    }
+}
+//# sourceMappingURL=http.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/promise/withDedupe.js
+
+/** @internal */
+const withDedupe_promiseCache = /*#__PURE__*/ new lru/* LruMap */.A(8192);
+/** Deduplicates in-flight promises. */
+function withDedupe(fn, { enabled = true, id }) {
+    if (!enabled || !id)
+        return fn();
+    if (withDedupe_promiseCache.get(id))
+        return withDedupe_promiseCache.get(id);
+    const promise = fn().finally(() => withDedupe_promiseCache.delete(id));
+    withDedupe_promiseCache.set(id, promise);
+    return promise;
+}
+//# sourceMappingURL=withDedupe.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/buildRequest.js
+
+
+
+
+
+
+
+function buildRequest(request, options = {}) {
+    return async (args, overrideOptions = {}) => {
+        const { dedupe = false, methods, retryDelay = 150, retryCount = 3, signal, uid, } = {
+            ...options,
+            ...overrideOptions,
+        };
+        const { method } = args;
+        if (methods?.exclude?.includes(method))
+            throw new MethodNotSupportedRpcError(new Error('method not supported'), {
+                method,
+            });
+        if (methods?.include && !methods.include.includes(method))
+            throw new MethodNotSupportedRpcError(new Error('method not supported'), {
+                method,
+            });
+        if (signal?.aborted)
+            throw (0,errors_utils/* getAbortError */.TY)(signal);
+        const requestId = dedupe
+            ? hashString(`${uid}.${(0,stringify/* stringify */.A)(args)}`)
+            : undefined;
+        return withDedupe(() => withRetry(async () => {
+            try {
+                return await request(args, signal ? { signal } : undefined);
+            }
+            catch (err_) {
+                if (signal?.aborted)
+                    throw (0,errors_utils/* getAbortError */.TY)(signal);
+                if ((0,errors_utils/* isAbortError */.zf)(err_))
+                    throw err_;
+                const err = err_;
+                switch (err.code) {
+                    // -32700
+                    case ParseRpcError.code:
+                        throw new ParseRpcError(err);
+                    // -32600
+                    case InvalidRequestRpcError.code:
+                        throw new InvalidRequestRpcError(err);
+                    // -32601
+                    case MethodNotFoundRpcError.code:
+                        throw new MethodNotFoundRpcError(err, { method: args.method });
+                    // -32602
+                    case InvalidParamsRpcError.code:
+                        throw new InvalidParamsRpcError(err);
+                    // -32603
+                    case InternalRpcError.code:
+                        throw new InternalRpcError(err);
+                    // -32000
+                    case InvalidInputRpcError.code:
+                        throw new InvalidInputRpcError(err);
+                    // -32001
+                    case ResourceNotFoundRpcError.code:
+                        throw new ResourceNotFoundRpcError(err);
+                    // -32002
+                    case ResourceUnavailableRpcError.code:
+                        throw new ResourceUnavailableRpcError(err);
+                    // -32003
+                    case TransactionRejectedRpcError.code:
+                        throw new TransactionRejectedRpcError(err);
+                    // -32004
+                    case MethodNotSupportedRpcError.code:
+                        throw new MethodNotSupportedRpcError(err, {
+                            method: args.method,
+                        });
+                    // -32005
+                    case LimitExceededRpcError.code:
+                        throw new LimitExceededRpcError(err);
+                    // -32006
+                    case JsonRpcVersionUnsupportedError.code:
+                        throw new JsonRpcVersionUnsupportedError(err);
+                    // 4001
+                    case UserRejectedRequestError.code:
+                        throw new UserRejectedRequestError(err);
+                    // 4100
+                    case UnauthorizedProviderError.code:
+                        throw new UnauthorizedProviderError(err);
+                    // 4200
+                    case UnsupportedProviderMethodError.code:
+                        throw new UnsupportedProviderMethodError(err);
+                    // 4900
+                    case ProviderDisconnectedError.code:
+                        throw new ProviderDisconnectedError(err);
+                    // 4901
+                    case ChainDisconnectedError.code:
+                        throw new ChainDisconnectedError(err);
+                    // 4902
+                    case SwitchChainError.code:
+                        throw new SwitchChainError(err);
+                    // 5700
+                    case UnsupportedNonOptionalCapabilityError.code:
+                        throw new UnsupportedNonOptionalCapabilityError(err);
+                    // 5710
+                    case UnsupportedChainIdError.code:
+                        throw new UnsupportedChainIdError(err);
+                    // 5720
+                    case DuplicateIdError.code:
+                        throw new DuplicateIdError(err);
+                    // 5730
+                    case UnknownBundleIdError.code:
+                        throw new UnknownBundleIdError(err);
+                    // 5740
+                    case BundleTooLargeError.code:
+                        throw new BundleTooLargeError(err);
+                    // 5750
+                    case AtomicReadyWalletRejectedUpgradeError.code:
+                        throw new AtomicReadyWalletRejectedUpgradeError(err);
+                    // 5760
+                    case AtomicityNotSupportedError.code:
+                        throw new AtomicityNotSupportedError(err);
+                    // CAIP-25: User Rejected Error
+                    // https://docs.walletconnect.com/2.0/specs/clients/sign/error-codes#rejected-caip-25
+                    case 5000:
+                        throw new UserRejectedRequestError(err);
+                    // WalletConnect: Session Settlement Failed
+                    // https://docs.walletconnect.com/2.0/specs/clients/sign/error-codes
+                    case WalletConnectSessionSettlementError.code:
+                        throw new WalletConnectSessionSettlementError(err);
+                    default:
+                        if (err_ instanceof base/* BaseError */.C)
+                            throw err_;
+                        throw new UnknownRpcError(err);
+                }
+            }
+        }, {
+            delay: ({ count, error }) => {
+                // If we find a Retry-After header, let's retry after the given time.
+                if (error && error instanceof errors_request/* HttpRequestError */.Ci) {
+                    const retryAfter = error?.headers?.get('Retry-After');
+                    if (retryAfter?.match(/\d/))
+                        return Number.parseInt(retryAfter, 10) * 1000;
+                }
+                // Otherwise, let's retry with an exponential backoff.
+                return ~~(1 << count) * retryDelay;
+            },
+            retryCount,
+            signal,
+            shouldRetry: ({ error }) => shouldRetry(error),
+        }), { enabled: dedupe, id: requestId });
+    };
+}
+/** @internal */
+function shouldRetry(error) {
+    if ((0,errors_utils/* isAbortError */.zf)(error))
+        return false;
+    if ('code' in error && typeof error.code === 'number') {
+        if (error.code === -1)
+            return true; // Unknown error
+        if (error.code === LimitExceededRpcError.code)
+            return true;
+        if (error.code === InternalRpcError.code)
+            return true;
+        // Too Many Requests — some providers (e.g. Alchemy in batch mode) return
+        // HTTP 200 with a JSON-RPC body of `{ code: 429 }` instead of an HTTP 429,
+        // so we need to handle this code in addition to the HTTP status check below.
+        if (error.code === 429)
+            return true;
+        return false;
+    }
+    if (error instanceof errors_request/* HttpRequestError */.Ci && error.status) {
+        // Forbidden
+        if (error.status === 403)
+            return true;
+        // Request Timeout
+        if (error.status === 408)
+            return true;
+        // Request Entity Too Large
+        if (error.status === 413)
+            return true;
+        // Too Many Requests
+        if (error.status === 429)
+            return true;
+        // Internal Server Error
+        if (error.status === 500)
+            return true;
+        // Bad Gateway
+        if (error.status === 502)
+            return true;
+        // Service Unavailable
+        if (error.status === 503)
+            return true;
+        // Gateway Timeout
+        if (error.status === 504)
+            return true;
+        return false;
+    }
+    return true;
+}
+/** @internal cyrb53 – fast, non-cryptographic 53-bit string hash */
+function hashString(str, seed = 0) {
+    let h1 = 0xdeadbeef ^ seed;
+    let h2 = 0x41c6ce57 ^ seed;
+    for (let i = 0; i < str.length; i++) {
+        const ch = str.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+    h1 ^= Math.imul(h2 ^ (h2 >>> 16), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+    h2 ^= Math.imul(h1 ^ (h1 >>> 16), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+//# sourceMappingURL=buildRequest.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/clients/transports/createTransport.js
+
+
+/**
+ * @description Creates an transport intended to be used with a client.
+ */
+function createTransport({ key, methods, name, request, retryCount = 3, retryDelay = 150, timeout, type, }, value) {
+    const uid = uid_uid();
+    return {
+        config: {
+            key,
+            methods,
+            name,
+            request,
+            retryCount,
+            retryDelay,
+            timeout,
+            type,
+        },
+        request: buildRequest(request, { methods, retryCount, retryDelay, uid }),
+        value,
+    };
+}
+//# sourceMappingURL=createTransport.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/clients/transports/http.js
+
+
+
+
+
+let signalId = 0;
+const signalIds = new WeakMap();
+function getSignalId(signal) {
+    if (!signal)
+        return 'default';
+    const id = signalIds.get(signal);
+    if (id !== undefined)
+        return id;
+    const nextId = signalId++;
+    signalIds.set(signal, nextId);
+    return nextId;
+}
+/**
+ * @description Creates a HTTP transport that connects to a JSON-RPC API.
+ */
+function http(
+/** URL of the JSON-RPC API. Defaults to the chain's public RPC URL. */
+url, config = {}) {
+    const { batch, fetchFn, fetchOptions, key = 'http', methods, name = 'HTTP JSON-RPC', onFetchRequest, onFetchResponse, retryDelay, raw, } = config;
+    return ({ chain, retryCount: retryCount_, timeout: timeout_ }) => {
+        const { batchSize = 1000, wait = 0 } = typeof batch === 'object' ? batch : {};
+        const retryCount = config.retryCount ?? retryCount_;
+        const timeout = timeout_ ?? config.timeout ?? 10_000;
+        const url_ = url || chain?.rpcUrls.default.http[0];
+        if (!url_)
+            throw new UrlRequiredError();
+        const rpcClient = getHttpRpcClient(url_, {
+            fetchFn,
+            fetchOptions,
+            onRequest: onFetchRequest,
+            onResponse: onFetchResponse,
+            timeout,
+        });
+        return createTransport({
+            key,
+            methods,
+            name,
+            async request({ method, params }, options) {
+                const body = { method, params };
+                const fetchOptions = options?.signal
+                    ? { signal: options.signal }
+                    : undefined;
+                const { schedule } = (0,createBatchScheduler/* createBatchScheduler */.u)({
+                    id: `${url_}.${getSignalId(options?.signal)}`,
+                    wait,
+                    shouldSplitBatch(requests) {
+                        return requests.length > batchSize;
+                    },
+                    fn: (body) => rpcClient.request({
+                        body,
+                        fetchOptions,
+                    }),
+                    sort: (a, b) => a.id - b.id,
+                });
+                const fn = async (body) => batch
+                    ? schedule(body)
+                    : [
+                        await rpcClient.request({
+                            body,
+                            fetchOptions,
+                        }),
+                    ];
+                const [{ error, result }] = await fn(body);
+                if (raw)
+                    return { error, result };
+                if (error)
+                    throw new errors_request/* RpcRequestError */.J8({
+                        body,
+                        error,
+                        url: url_,
+                    });
+                return result;
+            },
+            retryCount,
+            retryDelay,
+            timeout,
+            type: 'http',
+        }, {
+            fetchOptions,
+            url: url_,
+        });
+    };
+}
+//# sourceMappingURL=http.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/addChain.js
+
+/**
+ * Adds an EVM chain to the wallet.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/addChain
+ * - JSON-RPC Methods: [`eth_addEthereumChain`](https://eips.ethereum.org/EIPS/eip-3085)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link AddChainParameters}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { optimism } from 'viem/chains'
+ * import { addChain } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   transport: custom(window.ethereum),
+ * })
+ * await addChain(client, { chain: optimism })
+ */
+async function addChain(client, { chain }) {
+    const { id, name, nativeCurrency, rpcUrls, blockExplorers } = chain;
+    await client.request({
+        method: 'wallet_addEthereumChain',
+        params: [
+            {
+                chainId: (0,toHex/* numberToHex */.cK)(id),
+                chainName: name,
+                nativeCurrency,
+                rpcUrls: rpcUrls.default.http,
+                blockExplorerUrls: blockExplorers
+                    ? Object.values(blockExplorers).map(({ url }) => url)
+                    : undefined,
+            },
+        ],
+    }, { dedupe: true, retryCount: 0 });
+}
+//# sourceMappingURL=addChain.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/account.js
+
+class AccountNotFoundError extends base/* BaseError */.C {
+    constructor({ docsPath } = {}) {
+        super([
+            'Could not find an Account to execute with this Action.',
+            'Please provide an Account with the `account` argument on the Action, or by supplying an `account` to the Client.',
+        ].join('\n'), {
+            docsPath,
+            docsSlug: 'account',
+            name: 'AccountNotFoundError',
+        });
+    }
+}
+class AccountTypeNotSupportedError extends base/* BaseError */.C {
+    constructor({ docsPath, metaMessages, type, }) {
+        super(`Account type "${type}" is not supported.`, {
+            docsPath,
+            metaMessages,
+            name: 'AccountTypeNotSupportedError',
+        });
+    }
+}
+//# sourceMappingURL=account.js.map
+// EXTERNAL MODULE: ./node_modules/viem/_esm/errors/chain.js
+var errors_chain = __nccwpck_require__(9504);
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/utils/chain/assertCurrentChain.js
+
+function assertCurrentChain({ chain, currentChainId, }) {
+    if (!chain)
+        throw new errors_chain/* ChainNotFoundError */.jF();
+    if (currentChainId !== chain.id)
+        throw new errors_chain/* ChainMismatchError */.EH({ chain, currentChainId });
+}
+//# sourceMappingURL=assertCurrentChain.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/sendTransaction.js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const supportsWalletNamespace = new lru/* LruMap */.A(128);
+/**
+ * Creates, signs, and sends a new transaction to the network.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/sendTransaction
+ * - Examples: https://stackblitz.com/github/wevm/viem/tree/main/examples/transactions_sending-transactions
+ * - JSON-RPC Methods:
+ *   - JSON-RPC Accounts: [`eth_sendTransaction`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_sendtransaction)
+ *   - Local Accounts: [`eth_sendRawTransaction`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_sendrawtransaction)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link SendTransactionParameters}
+ * @returns The [Transaction](https://viem.sh/docs/glossary/terms#transaction) hash. {@link SendTransactionReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { sendTransaction } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const hash = await sendTransaction(client, {
+ *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ *   to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+ *   value: 1000000000000000000n,
+ * })
+ *
+ * @example
+ * // Account Hoisting
+ * import { createWalletClient, http } from 'viem'
+ * import { privateKeyToAccount } from 'viem/accounts'
+ * import { mainnet } from 'viem/chains'
+ * import { sendTransaction } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   account: privateKeyToAccount('0x…'),
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const hash = await sendTransaction(client, {
+ *   to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+ *   value: 1000000000000000000n,
+ * })
+ */
+async function sendTransaction(client, parameters) {
+    const { account: account_ = client.account, assertChainId = true, chain = client.chain, accessList, authorizationList, blobs, data, dataSuffix = typeof client.dataSuffix === 'string'
+        ? client.dataSuffix
+        : client.dataSuffix?.value, gas, gasPrice, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, nonce, type, value, ...rest } = parameters;
+    if (typeof account_ === 'undefined')
+        throw new AccountNotFoundError({
+            docsPath: '/docs/actions/wallet/sendTransaction',
+        });
+    const account = account_ ? (0,parseAccount/* parseAccount */.J)(account_) : null;
+    let nonceManagerParameters;
+    try {
+        (0,assertRequest/* assertRequest */.c)(parameters);
+        const to = await (async () => {
+            // If `to` exists on the parameters, use that.
+            if (parameters.to)
+                return parameters.to;
+            // If `to` is null, we are sending a deployment transaction.
+            if (parameters.to === null)
+                return undefined;
+            // If no `to` exists, and we are sending a EIP-7702 transaction, use the
+            // address of the first authorization in the list.
+            if (authorizationList && authorizationList.length > 0)
+                return await recoverAuthorizationAddress({
+                    authorization: authorizationList[0],
+                }).catch(() => {
+                    throw new base/* BaseError */.C('`to` is required. Could not infer from `authorizationList`.');
+                });
+            // Otherwise, we are sending a deployment transaction.
+            return undefined;
+        })();
+        if (account?.type === 'json-rpc' || account === null) {
+            let chainId;
+            if (chain !== null) {
+                chainId = await getAction(client, getChainId_getChainId, 'getChainId')({});
+                if (assertChainId)
+                    assertCurrentChain({
+                        currentChainId: chainId,
+                        chain,
+                    });
+            }
+            const chainFormat = client.chain?.formatters?.transactionRequest?.format;
+            const format = chainFormat || transactionRequest/* formatTransactionRequest */.Bv;
+            const request = format({
+                // Pick out extra data that might exist on the chain's transaction request type.
+                ...(0,extract/* extract */.o)(rest, { format: chainFormat }),
+                accessList,
+                account,
+                authorizationList,
+                blobs,
+                chainId,
+                data: dataSuffix ? (0,concat/* concat */.xW)([data ?? '0x', dataSuffix]) : data,
+                gas,
+                gasPrice,
+                maxFeePerBlobGas,
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+                nonce,
+                to,
+                type,
+                value,
+            }, 'sendTransaction');
+            const isWalletNamespaceSupported = supportsWalletNamespace.get(client.uid);
+            const method = isWalletNamespaceSupported
+                ? 'wallet_sendTransaction'
+                : 'eth_sendTransaction';
+            try {
+                return await client.request({
+                    method,
+                    params: [request],
+                }, { retryCount: 0 });
+            }
+            catch (e) {
+                if (isWalletNamespaceSupported === false)
+                    throw e;
+                const error = e;
+                // If the transport does not support the method or input, attempt to use the
+                // `wallet_sendTransaction` method.
+                if (error.name === 'InvalidInputRpcError' ||
+                    error.name === 'InvalidParamsRpcError' ||
+                    error.name === 'MethodNotFoundRpcError' ||
+                    error.name === 'MethodNotSupportedRpcError') {
+                    return await client
+                        .request({
+                        method: 'wallet_sendTransaction',
+                        params: [request],
+                    }, { retryCount: 0 })
+                        .then((hash) => {
+                        supportsWalletNamespace.set(client.uid, true);
+                        return hash;
+                    })
+                        .catch((e) => {
+                        const walletNamespaceError = e;
+                        if (walletNamespaceError.name === 'MethodNotFoundRpcError' ||
+                            walletNamespaceError.name === 'MethodNotSupportedRpcError') {
+                            supportsWalletNamespace.set(client.uid, false);
+                            throw error;
+                        }
+                        throw walletNamespaceError;
+                    });
+                }
+                throw error;
+            }
+        }
+        if (account?.type === 'local') {
+            if (account.nonceManager && typeof nonce === 'undefined') {
+                const requestChainId = rest.chainId;
+                const chainId = await (async () => {
+                    if (typeof requestChainId === 'number')
+                        return requestChainId;
+                    if (chain)
+                        return chain.id;
+                    return getAction(client, getChainId_getChainId, 'getChainId')({});
+                })();
+                nonceManagerParameters = { address: account.address, chainId };
+            }
+            // Prepare the request for signing (assign appropriate fees, etc.)
+            const request = await getAction(client, prepareTransactionRequest, 'prepareTransactionRequest')({
+                account,
+                accessList,
+                authorizationList,
+                blobs,
+                chain,
+                data: dataSuffix ? (0,concat/* concat */.xW)([data ?? '0x', dataSuffix]) : data,
+                gas,
+                gasPrice,
+                maxFeePerBlobGas,
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+                nonce,
+                nonceManager: account.nonceManager,
+                parameters: [...defaultParameters, 'sidecars'],
+                type,
+                value,
+                ...rest,
+                to,
+            });
+            const serializer = chain?.serializers?.transaction;
+            const serializedTransaction = (await account.signTransaction(request, {
+                serializer,
+            }));
+            return await getAction(client, sendRawTransaction, 'sendRawTransaction')({
+                serializedTransaction,
+            });
+        }
+        if (account?.type === 'smart')
+            throw new AccountTypeNotSupportedError({
+                metaMessages: [
+                    'Consider using the `sendUserOperation` Action instead.',
+                ],
+                docsPath: '/docs/actions/bundler/sendUserOperation',
+                type: 'smart',
+            });
+        throw new AccountTypeNotSupportedError({
+            docsPath: '/docs/actions/wallet/sendTransaction',
+            type: account?.type,
+        });
+    }
+    catch (err) {
+        if (err instanceof AccountTypeNotSupportedError)
+            throw err;
+        if (nonceManagerParameters)
+            account?.nonceManager?.reset(nonceManagerParameters);
+        throw getTransactionError(err, {
+            ...parameters,
+            account,
+            chain: parameters.chain || undefined,
+        });
+    }
+}
+//# sourceMappingURL=sendTransaction.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/deployContract.js
+
+
+/**
+ * Deploys a contract to the network, given bytecode and constructor arguments.
+ *
+ * - Docs: https://viem.sh/docs/contract/deployContract
+ * - Examples: https://stackblitz.com/github/wevm/viem/tree/main/examples/contracts_deploying-contracts
+ *
+ * @param client - Client to use
+ * @param parameters - {@link DeployContractParameters}
+ * @returns The [Transaction](https://viem.sh/docs/glossary/terms#transaction) hash. {@link DeployContractReturnType}
+ *
+ * @example
+ * import { createWalletClient, http } from 'viem'
+ * import { privateKeyToAccount } from 'viem/accounts'
+ * import { mainnet } from 'viem/chains'
+ * import { deployContract } from 'viem/contract'
+ *
+ * const client = createWalletClient({
+ *   account: privateKeyToAccount('0x…'),
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const hash = await deployContract(client, {
+ *   abi: [],
+ *   account: '0x…,
+ *   bytecode: '0x608060405260405161083e38038061083e833981016040819052610...',
+ * })
+ */
+function deployContract(walletClient, parameters) {
+    const { abi, args, bytecode, ...request } = parameters;
+    const calldata = (0,encodeDeployData/* encodeDeployData */.m)({ abi, args, bytecode });
+    return sendTransaction(walletClient, {
+        ...request,
+        ...(request.authorizationList ? { to: null } : {}),
+        data: calldata,
+    });
+}
+//# sourceMappingURL=deployContract.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/getAddresses.js
+
+/**
+ * Returns a list of account addresses owned by the wallet or client.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/getAddresses
+ * - JSON-RPC Methods: [`eth_accounts`](https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_accounts)
+ *
+ * @param client - Client to use
+ * @returns List of account addresses owned by the wallet or client. {@link GetAddressesReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { getAddresses } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const accounts = await getAddresses(client)
+ */
+async function getAddresses(client) {
+    if (client.account?.type === 'local')
+        return [client.account.address];
+    const addresses = await client.request({ method: 'eth_accounts' }, { dedupe: true });
+    return addresses.map((address) => (0,getAddress/* checksumAddress */.o)(address));
+}
+//# sourceMappingURL=getAddresses.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/sendCalls.js
+
+
+
+
+
+
+
+
+
+const fallbackMagicIdentifier = '0x5792579257925792579257925792579257925792579257925792579257925792';
+const fallbackTransactionErrorMagicIdentifier = (0,toHex/* numberToHex */.cK)(0, {
+    size: 32,
+});
+/**
+ * Requests the connected wallet to send a batch of calls.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/sendCalls
+ * - JSON-RPC Methods: [`wallet_sendCalls`](https://eips.ethereum.org/EIPS/eip-5792)
+ *
+ * @param client - Client to use
+ * @returns Transaction identifier. {@link SendCallsReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { sendCalls } from 'viem/actions'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const id = await sendCalls(client, {
+ *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ *   calls: [
+ *     {
+ *       data: '0xdeadbeef',
+ *       to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+ *     },
+ *     {
+ *       to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+ *       value: 69420n,
+ *     },
+ *   ],
+ * })
+ */
+async function sendCalls(client, parameters) {
+    const { account: account_ = client.account, chain = client.chain, experimental_fallback, experimental_fallbackDelay = 32, forceAtomic = false, id, version = '2.0.0', } = parameters;
+    const account = account_ ? (0,parseAccount/* parseAccount */.J)(account_) : null;
+    let capabilities = parameters.capabilities;
+    if (client.dataSuffix && !parameters.capabilities?.dataSuffix) {
+        if (typeof client.dataSuffix === 'string')
+            capabilities = {
+                ...parameters.capabilities,
+                dataSuffix: { value: client.dataSuffix, optional: true },
+            };
+        else
+            capabilities = {
+                ...parameters.capabilities,
+                dataSuffix: {
+                    value: client.dataSuffix.value,
+                    ...(client.dataSuffix.required ? {} : { optional: true }),
+                },
+            };
+    }
+    const calls = parameters.calls.map((call_) => {
+        const call = call_;
+        const data = call.abi
+            ? (0,encodeFunctionData/* encodeFunctionData */.p)({
+                abi: call.abi,
+                functionName: call.functionName,
+                args: call.args,
+            })
+            : call.data;
+        return {
+            data: call.dataSuffix && data ? (0,concat/* concat */.xW)([data, call.dataSuffix]) : data,
+            to: call.to,
+            value: call.value ? (0,toHex/* numberToHex */.cK)(call.value) : undefined,
+        };
+    });
+    try {
+        const response = await client.request({
+            method: 'wallet_sendCalls',
+            params: [
+                {
+                    atomicRequired: forceAtomic,
+                    calls,
+                    capabilities,
+                    chainId: (0,toHex/* numberToHex */.cK)(chain.id),
+                    from: account?.address,
+                    id,
+                    version,
+                },
+            ],
+        }, { retryCount: 0 });
+        if (typeof response === 'string')
+            return { id: response };
+        return response;
+    }
+    catch (err) {
+        const error = err;
+        // If the transport does not support EIP-5792, fall back to
+        // `eth_sendTransaction`.
+        if (experimental_fallback &&
+            (error.name === 'MethodNotFoundRpcError' ||
+                error.name === 'MethodNotSupportedRpcError' ||
+                error.name === 'UnknownRpcError' ||
+                error.details
+                    .toLowerCase()
+                    .includes('does not exist / is not available') ||
+                error.details.toLowerCase().includes('missing or invalid. request()') ||
+                error.details
+                    .toLowerCase()
+                    .includes('did not match any variant of untagged enum') ||
+                error.details
+                    .toLowerCase()
+                    .includes('account upgraded to unsupported contract') ||
+                error.details.toLowerCase().includes('eip-7702 not supported') ||
+                error.details.toLowerCase().includes('unsupported wc_ method') ||
+                // magic.link
+                error.details
+                    .toLowerCase()
+                    .includes('feature toggled misconfigured') ||
+                // Trust Wallet
+                error.details
+                    .toLowerCase()
+                    .includes('jsonrpcengine: response has no error or result for request'))) {
+            if (capabilities) {
+                const hasNonOptionalCapability = Object.values(capabilities).some((capability) => !capability.optional);
+                if (hasNonOptionalCapability) {
+                    const message = 'non-optional `capabilities` are not supported on fallback to `eth_sendTransaction`.';
+                    throw new UnsupportedNonOptionalCapabilityError(new base/* BaseError */.C(message, {
+                        details: message,
+                    }));
+                }
+            }
+            if (forceAtomic && calls.length > 1) {
+                const message = '`forceAtomic` is not supported on fallback to `eth_sendTransaction`.';
+                throw new AtomicityNotSupportedError(new base/* BaseError */.C(message, {
+                    details: message,
+                }));
+            }
+            const promises = [];
+            for (const call of calls) {
+                const promise = sendTransaction(client, {
+                    account,
+                    chain,
+                    data: call.data,
+                    to: call.to,
+                    value: call.value ? (0,fromHex/* hexToBigInt */.uU)(call.value) : undefined,
+                });
+                promises.push(promise);
+                // Note: some browser wallets require a small delay between transactions
+                // to prevent duplicate JSON-RPC requests.
+                if (experimental_fallbackDelay > 0)
+                    await new Promise((resolve) => setTimeout(resolve, experimental_fallbackDelay));
+            }
+            const results = await Promise.allSettled(promises);
+            if (results.every((r) => r.status === 'rejected'))
+                throw results[0].reason;
+            const hashes = results.map((result) => {
+                if (result.status === 'fulfilled')
+                    return result.value;
+                return fallbackTransactionErrorMagicIdentifier;
+            });
+            return {
+                id: (0,concat/* concat */.xW)([
+                    ...hashes,
+                    (0,toHex/* numberToHex */.cK)(chain.id, { size: 32 }),
+                    fallbackMagicIdentifier,
+                ]),
+            };
+        }
+        throw getTransactionError(err, {
+            ...parameters,
+            account,
+            chain: parameters.chain,
+        });
+    }
+}
+//# sourceMappingURL=sendCalls.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/getCallsStatus.js
+
+
+
+
+
+/**
+ * Returns the status of a call batch that was sent via `sendCalls`.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/getCallsStatus
+ * - JSON-RPC Methods: [`wallet_getCallsStatus`](https://eips.ethereum.org/EIPS/eip-5792)
+ *
+ * @param client - Client to use
+ * @returns Status of the calls. {@link GetCallsStatusReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { getCallsStatus } from 'viem/actions'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const { receipts, status } = await getCallsStatus(client, { id: '0xdeadbeef' })
+ */
+async function getCallsStatus(client, parameters) {
+    async function getStatus(id) {
+        const isTransactions = id.endsWith(fallbackMagicIdentifier.slice(2));
+        if (isTransactions) {
+            const chainId = (0,trim/* trim */.B)((0,slice/* sliceHex */.iN)(id, -64, -32));
+            const hashes = (0,slice/* sliceHex */.iN)(id, 0, -64)
+                .slice(2)
+                .match(/.{1,64}/g);
+            const receipts = await Promise.all(hashes.map((hash) => fallbackTransactionErrorMagicIdentifier.slice(2) !== hash
+                ? client.request({
+                    method: 'eth_getTransactionReceipt',
+                    params: [`0x${hash}`],
+                }, { dedupe: true })
+                : undefined));
+            const status = (() => {
+                if (receipts.some((r) => r === null))
+                    return 100; // pending
+                if (receipts.every((r) => r?.status === '0x1'))
+                    return 200; // success
+                if (receipts.every((r) => r?.status === '0x0'))
+                    return 500; // complete failure
+                return 600; // partial failure
+            })();
+            return {
+                atomic: false,
+                chainId: (0,fromHex/* hexToNumber */.ME)(chainId),
+                receipts: receipts.filter(Boolean),
+                status,
+                version: '2.0.0',
+            };
+        }
+        return client.request({
+            method: 'wallet_getCallsStatus',
+            params: [id],
+        });
+    }
+    const { atomic = false, chainId, receipts, version = '2.0.0', ...response } = await getStatus(parameters.id);
+    const [status, statusCode] = (() => {
+        const statusCode = response.status;
+        if (statusCode >= 100 && statusCode < 200)
+            return ['pending', statusCode];
+        if (statusCode >= 200 && statusCode < 300)
+            return ['success', statusCode];
+        if (statusCode >= 300 && statusCode < 700)
+            return ['failure', statusCode];
+        // @ts-expect-error: for backwards compatibility
+        if (statusCode === 'CONFIRMED')
+            return ['success', 200];
+        // @ts-expect-error: for backwards compatibility
+        if (statusCode === 'PENDING')
+            return ['pending', 100];
+        return [undefined, statusCode];
+    })();
+    return {
+        ...response,
+        atomic,
+        // @ts-expect-error: for backwards compatibility
+        chainId: chainId ? (0,fromHex/* hexToNumber */.ME)(chainId) : undefined,
+        receipts: receipts?.map((receipt) => ({
+            ...receipt,
+            blockNumber: (0,fromHex/* hexToBigInt */.uU)(receipt.blockNumber),
+            gasUsed: (0,fromHex/* hexToBigInt */.uU)(receipt.gasUsed),
+            status: receiptStatuses[receipt.status],
+        })) ?? [],
+        statusCode,
+        status,
+        version,
+    };
+}
+//# sourceMappingURL=getCallsStatus.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/getCapabilities.js
+
+
+/**
+ * Extract capabilities that a connected wallet supports (e.g. paymasters, session keys, etc).
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/getCapabilities
+ * - JSON-RPC Methods: [`wallet_getCapabilities`](https://eips.ethereum.org/EIPS/eip-5792)
+ *
+ * @param client - Client to use
+ * @returns The wallet's capabilities. {@link GetCapabilitiesReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { getCapabilities } from 'viem/actions'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const capabilities = await getCapabilities(client)
+ */
+async function getCapabilities(client, parameters = {}) {
+    const { account = client.account, chainId } = parameters;
+    const account_ = account ? (0,parseAccount/* parseAccount */.J)(account) : undefined;
+    const params = chainId
+        ? [account_?.address, [(0,toHex/* numberToHex */.cK)(chainId)]]
+        : [account_?.address];
+    const capabilities_raw = await client.request({
+        method: 'wallet_getCapabilities',
+        params,
+    });
+    const capabilities = {};
+    for (const [chainId, capabilities_] of Object.entries(capabilities_raw)) {
+        capabilities[Number(chainId)] = {};
+        for (let [key, value] of Object.entries(capabilities_)) {
+            if (key === 'addSubAccount')
+                key = 'unstable_addSubAccount';
+            capabilities[Number(chainId)][key] = value;
+        }
+    }
+    return (typeof chainId === 'number' ? capabilities[chainId] : capabilities);
+}
+//# sourceMappingURL=getCapabilities.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/getPermissions.js
+/**
+ * Gets the wallets current permissions.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/getPermissions
+ * - JSON-RPC Methods: [`wallet_getPermissions`](https://eips.ethereum.org/EIPS/eip-2255)
+ *
+ * @param client - Client to use
+ * @returns The wallet permissions. {@link GetPermissionsReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { getPermissions } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const permissions = await getPermissions(client)
+ */
+async function getPermissions(client) {
+    const permissions = await client.request({ method: 'wallet_getPermissions' }, { dedupe: true });
+    return permissions;
+}
+//# sourceMappingURL=getPermissions.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/prepareAuthorization.js
+
+
+
+
+
+
+/**
+ * Prepares an [EIP-7702 Authorization](https://eips.ethereum.org/EIPS/eip-7702) object for signing.
+ * This Action will fill the required fields of the Authorization object if they are not provided (e.g. `nonce` and `chainId`).
+ *
+ * With the prepared Authorization object, you can use [`signAuthorization`](https://viem.sh/docs/eip7702/signAuthorization) to sign over the Authorization object.
+ *
+ * @param client - Client to use
+ * @param parameters - {@link PrepareAuthorizationParameters}
+ * @returns The prepared Authorization object. {@link PrepareAuthorizationReturnType}
+ *
+ * @example
+ * import { createClient, http } from 'viem'
+ * import { privateKeyToAccount } from 'viem/accounts'
+ * import { mainnet } from 'viem/chains'
+ * import { prepareAuthorization } from 'viem/experimental'
+ *
+ * const client = createClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const authorization = await prepareAuthorization(client, {
+ *   account: privateKeyToAccount('0x..'),
+ *   contractAddress: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ * })
+ *
+ * @example
+ * // Account Hoisting
+ * import { createClient, http } from 'viem'
+ * import { privateKeyToAccount } from 'viem/accounts'
+ * import { mainnet } from 'viem/chains'
+ * import { prepareAuthorization } from 'viem/experimental'
+ *
+ * const client = createClient({
+ *   account: privateKeyToAccount('0x…'),
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const authorization = await prepareAuthorization(client, {
+ *   contractAddress: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ * })
+ */
+async function prepareAuthorization(client, parameters) {
+    const { account: account_ = client.account, chainId, nonce } = parameters;
+    if (!account_)
+        throw new AccountNotFoundError({
+            docsPath: '/docs/eip7702/prepareAuthorization',
+        });
+    const account = (0,parseAccount/* parseAccount */.J)(account_);
+    const executor = (() => {
+        if (!parameters.executor)
+            return undefined;
+        if (parameters.executor === 'self')
+            return parameters.executor;
+        return (0,parseAccount/* parseAccount */.J)(parameters.executor);
+    })();
+    const authorization = {
+        address: parameters.contractAddress ?? parameters.address,
+        chainId,
+        nonce,
+    };
+    if (typeof authorization.chainId === 'undefined')
+        authorization.chainId =
+            client.chain?.id ??
+                (await getAction(client, getChainId_getChainId, 'getChainId')({}));
+    if (typeof authorization.nonce === 'undefined') {
+        authorization.nonce = await getAction(client, getTransactionCount, 'getTransactionCount')({
+            address: account.address,
+            blockTag: 'pending',
+        });
+        if (executor === 'self' ||
+            (executor?.address && (0,isAddressEqual/* isAddressEqual */.h)(executor.address, account.address)))
+            authorization.nonce += 1;
+    }
+    return authorization;
+}
+//# sourceMappingURL=prepareAuthorization.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/requestAddresses.js
+
+/**
+ * Requests a list of accounts managed by a wallet.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/requestAddresses
+ * - JSON-RPC Methods: [`eth_requestAccounts`](https://eips.ethereum.org/EIPS/eip-1102)
+ *
+ * Sends a request to the wallet, asking for permission to access the user's accounts. After the user accepts the request, it will return a list of accounts (addresses).
+ *
+ * This API can be useful for dapps that need to access the user's accounts in order to execute transactions or interact with smart contracts.
+ *
+ * @param client - Client to use
+ * @returns List of accounts managed by a wallet {@link RequestAddressesReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { requestAddresses } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const accounts = await requestAddresses(client)
+ */
+async function requestAddresses(client) {
+    const addresses = await client.request({ method: 'eth_requestAccounts' }, { dedupe: true, retryCount: 0 });
+    return addresses.map((address) => (0,getAddress/* getAddress */.b)(address));
+}
+//# sourceMappingURL=requestAddresses.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/requestPermissions.js
+/**
+ * Requests permissions for a wallet.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/requestPermissions
+ * - JSON-RPC Methods: [`wallet_requestPermissions`](https://eips.ethereum.org/EIPS/eip-2255)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link RequestPermissionsParameters}
+ * @returns The wallet permissions. {@link RequestPermissionsReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { requestPermissions } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const permissions = await requestPermissions(client, {
+ *   eth_accounts: {}
+ * })
+ */
+async function requestPermissions(client, permissions) {
+    return client.request({
+        method: 'wallet_requestPermissions',
+        params: [permissions],
+    }, { retryCount: 0 });
+}
+//# sourceMappingURL=requestPermissions.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/errors/calls.js
+
+class BundleFailedError extends base/* BaseError */.C {
+    constructor(result) {
+        super(`Call bundle failed with status: ${result.statusCode}`, {
+            name: 'BundleFailedError',
+        });
+        Object.defineProperty(this, "result", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        this.result = result;
+    }
+}
+//# sourceMappingURL=calls.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/waitForCallsStatus.js
+
+
+
+
+
+
+
+
+
+/**
+ * Waits for the status & receipts of a call bundle that was sent via `sendCalls`.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/waitForCallsStatus
+ * - JSON-RPC Methods: [`wallet_getCallsStatus`](https://eips.ethereum.org/EIPS/eip-5792)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link WaitForCallsStatusParameters}
+ * @returns Status & receipts of the call bundle. {@link WaitForCallsStatusReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { waitForCallsStatus } from 'viem/actions'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ *
+ * const { receipts, status } = await waitForCallsStatus(client, { id: '0xdeadbeef' })
+ */
+async function waitForCallsStatus(client, parameters) {
+    const { id, pollingInterval = client.pollingInterval, status = ({ statusCode }) => statusCode === 200 || statusCode >= 300, retryCount = 4, retryDelay = ({ count }) => ~~(1 << count) * 200, // exponential backoff
+    timeout = 60_000, throwOnFailure = false, } = parameters;
+    const observerId = (0,stringify/* stringify */.A)(['waitForCallsStatus', client.uid, id]);
+    const { promise, resolve, reject } = (0,withResolvers/* withResolvers */.Y)();
+    let timer;
+    const unobserve = observe(observerId, { resolve, reject }, (emit) => {
+        const unpoll = poll(async () => {
+            const done = (fn) => {
+                clearTimeout(timer);
+                unpoll();
+                fn();
+                unobserve();
+            };
+            try {
+                const result = await withRetry(async () => {
+                    const result = await getAction(client, getCallsStatus, 'getCallsStatus')({ id });
+                    if (throwOnFailure && result.status === 'failure')
+                        throw new BundleFailedError(result);
+                    return result;
+                }, {
+                    retryCount,
+                    delay: retryDelay,
+                });
+                if (!status(result))
+                    return;
+                done(() => emit.resolve(result));
+            }
+            catch (error) {
+                done(() => emit.reject(error));
+            }
+        }, {
+            interval: pollingInterval,
+            emitOnBegin: true,
+        });
+        return unpoll;
+    });
+    timer = timeout
+        ? setTimeout(() => {
+            unobserve();
+            clearTimeout(timer);
+            reject(new WaitForCallsStatusTimeoutError({ id }));
+        }, timeout)
+        : undefined;
+    return await promise;
+}
+class WaitForCallsStatusTimeoutError extends base/* BaseError */.C {
+    constructor({ id }) {
+        super(`Timed out while waiting for call bundle with id "${id}" to be confirmed.`, { name: 'WaitForCallsStatusTimeoutError' });
+    }
+}
+//# sourceMappingURL=waitForCallsStatus.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/sendCallsSync.js
+
+
+
+/**
+ * Requests the connected wallet to send a batch of calls, and waits for the calls to be included in a block.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/sendCallsSync
+ * - JSON-RPC Methods: [`wallet_sendCalls`](https://eips.ethereum.org/EIPS/eip-5792)
+ *
+ * @param client - Client to use
+ * @returns Calls status. {@link SendCallsSyncReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { sendCalls } from 'viem/actions'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const status = await sendCallsSync(client, {
+ *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ *   calls: [
+ *     {
+ *       data: '0xdeadbeef',
+ *       to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+ *     },
+ *     {
+ *       to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+ *       value: 69420n,
+ *     },
+ *   ],
+ * })
+ */
+async function sendCallsSync(client, parameters) {
+    const { chain = client.chain } = parameters;
+    const timeout = parameters.timeout ?? Math.max((chain?.blockTime ?? 0) * 3, 5_000);
+    const result = await getAction(client, sendCalls, 'sendCalls')(parameters);
+    const status = await getAction(client, waitForCallsStatus, 'waitForCallsStatus')({
+        ...parameters,
+        id: result.id,
+        timeout,
+    });
+    return status;
+}
+//# sourceMappingURL=sendCallsSync.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/sendTransactionSync.js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const sendTransactionSync_supportsWalletNamespace = new lru/* LruMap */.A(128);
+/**
+ * Creates, signs, and sends a new transaction to the network synchronously.
+ * Returns the transaction receipt.
+ *
+ * @param client - Client to use
+ * @param parameters - {@link SendTransactionSyncParameters}
+ * @returns The transaction receipt. {@link SendTransactionSyncReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { sendTransactionSync } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const receipt = await sendTransactionSync(client, {
+ *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ *   to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+ *   value: 1000000000000000000n,
+ * })
+ *
+ * @example
+ * // Account Hoisting
+ * import { createWalletClient, http } from 'viem'
+ * import { privateKeyToAccount } from 'viem/accounts'
+ * import { mainnet } from 'viem/chains'
+ * import { sendTransactionSync } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   account: privateKeyToAccount('0x…'),
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const receipt = await sendTransactionSync(client, {
+ *   to: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+ *   value: 1000000000000000000n,
+ * })
+ */
+async function sendTransactionSync(client, parameters) {
+    const { account: account_ = client.account, assertChainId = true, chain = client.chain, accessList, authorizationList, blobs, data, dataSuffix = typeof client.dataSuffix === 'string'
+        ? client.dataSuffix
+        : client.dataSuffix?.value, gas, gasPrice, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, nonce, pollingInterval, throwOnReceiptRevert, type, value, ...rest } = parameters;
+    const timeout = parameters.timeout ?? Math.max((chain?.blockTime ?? 0) * 3, 5_000);
+    if (typeof account_ === 'undefined')
+        throw new AccountNotFoundError({
+            docsPath: '/docs/actions/wallet/sendTransactionSync',
+        });
+    const account = account_ ? (0,parseAccount/* parseAccount */.J)(account_) : null;
+    let nonceManagerParameters;
+    try {
+        (0,assertRequest/* assertRequest */.c)(parameters);
+        const to = await (async () => {
+            // If `to` exists on the parameters, use that.
+            if (parameters.to)
+                return parameters.to;
+            // If `to` is null, we are sending a deployment transaction.
+            if (parameters.to === null)
+                return undefined;
+            // If no `to` exists, and we are sending a EIP-7702 transaction, use the
+            // address of the first authorization in the list.
+            if (authorizationList && authorizationList.length > 0)
+                return await recoverAuthorizationAddress({
+                    authorization: authorizationList[0],
+                }).catch(() => {
+                    throw new base/* BaseError */.C('`to` is required. Could not infer from `authorizationList`.');
+                });
+            // Otherwise, we are sending a deployment transaction.
+            return undefined;
+        })();
+        if (account?.type === 'json-rpc' || account === null) {
+            let chainId;
+            if (chain !== null) {
+                chainId = await getAction(client, getChainId_getChainId, 'getChainId')({});
+                if (assertChainId)
+                    assertCurrentChain({
+                        currentChainId: chainId,
+                        chain,
+                    });
+            }
+            const chainFormat = client.chain?.formatters?.transactionRequest?.format;
+            const format = chainFormat || transactionRequest/* formatTransactionRequest */.Bv;
+            const request = format({
+                // Pick out extra data that might exist on the chain's transaction request type.
+                ...(0,extract/* extract */.o)(rest, { format: chainFormat }),
+                accessList,
+                account,
+                authorizationList,
+                blobs,
+                chainId,
+                data: dataSuffix ? (0,concat/* concat */.xW)([data ?? '0x', dataSuffix]) : data,
+                gas,
+                gasPrice,
+                maxFeePerBlobGas,
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+                nonce,
+                to,
+                type,
+                value,
+            }, 'sendTransaction');
+            const isWalletNamespaceSupported = sendTransactionSync_supportsWalletNamespace.get(client.uid);
+            const method = isWalletNamespaceSupported
+                ? 'wallet_sendTransaction'
+                : 'eth_sendTransaction';
+            const hash = await (async () => {
+                try {
+                    return await client.request({
+                        method,
+                        params: [request],
+                    }, { retryCount: 0 });
+                }
+                catch (e) {
+                    if (isWalletNamespaceSupported === false)
+                        throw e;
+                    const error = e;
+                    // If the transport does not support the method or input, attempt to use the
+                    // `wallet_sendTransaction` method.
+                    if (error.name === 'InvalidInputRpcError' ||
+                        error.name === 'InvalidParamsRpcError' ||
+                        error.name === 'MethodNotFoundRpcError' ||
+                        error.name === 'MethodNotSupportedRpcError') {
+                        return (await client
+                            .request({
+                            method: 'wallet_sendTransaction',
+                            params: [request],
+                        }, { retryCount: 0 })
+                            .then((hash) => {
+                            sendTransactionSync_supportsWalletNamespace.set(client.uid, true);
+                            return hash;
+                        })
+                            .catch((e) => {
+                            const walletNamespaceError = e;
+                            if (walletNamespaceError.name === 'MethodNotFoundRpcError' ||
+                                walletNamespaceError.name === 'MethodNotSupportedRpcError') {
+                                sendTransactionSync_supportsWalletNamespace.set(client.uid, false);
+                                throw error;
+                            }
+                            throw walletNamespaceError;
+                        }));
+                    }
+                    throw error;
+                }
+            })();
+            const receipt = await getAction(client, waitForTransactionReceipt, 'waitForTransactionReceipt')({
+                checkReplacement: false,
+                hash,
+                pollingInterval,
+                timeout,
+            });
+            if (throwOnReceiptRevert && receipt.status === 'reverted')
+                throw new errors_transaction/* TransactionReceiptRevertedError */.Sq({ receipt });
+            return receipt;
+        }
+        if (account?.type === 'local') {
+            if (account.nonceManager && typeof nonce === 'undefined') {
+                const requestChainId = rest.chainId;
+                const chainId = await (async () => {
+                    if (typeof requestChainId === 'number')
+                        return requestChainId;
+                    if (chain)
+                        return chain.id;
+                    return getAction(client, getChainId_getChainId, 'getChainId')({});
+                })();
+                nonceManagerParameters = { address: account.address, chainId };
+            }
+            // Prepare the request for signing (assign appropriate fees, etc.)
+            const request = await getAction(client, prepareTransactionRequest, 'prepareTransactionRequest')({
+                account,
+                accessList,
+                authorizationList,
+                blobs,
+                chain,
+                data: dataSuffix ? (0,concat/* concat */.xW)([data ?? '0x', dataSuffix]) : data,
+                gas,
+                gasPrice,
+                maxFeePerBlobGas,
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+                nonce,
+                nonceManager: account.nonceManager,
+                parameters: [...defaultParameters, 'sidecars'],
+                type,
+                value,
+                ...rest,
+                to,
+            });
+            const serializer = chain?.serializers?.transaction;
+            const serializedTransaction = (await account.signTransaction(request, {
+                serializer,
+            }));
+            return (await getAction(client, sendRawTransactionSync, 'sendRawTransactionSync')({
+                serializedTransaction,
+                throwOnReceiptRevert,
+                timeout: parameters.timeout,
+            }));
+        }
+        if (account?.type === 'smart')
+            throw new AccountTypeNotSupportedError({
+                metaMessages: [
+                    'Consider using the `sendUserOperation` Action instead.',
+                ],
+                docsPath: '/docs/actions/bundler/sendUserOperation',
+                type: 'smart',
+            });
+        throw new AccountTypeNotSupportedError({
+            docsPath: '/docs/actions/wallet/sendTransactionSync',
+            type: account?.type,
+        });
+    }
+    catch (err) {
+        if (err instanceof AccountTypeNotSupportedError)
+            throw err;
+        if (nonceManagerParameters &&
+            !(err instanceof errors_transaction/* TransactionReceiptRevertedError */.Sq))
+            account?.nonceManager?.reset(nonceManagerParameters);
+        throw getTransactionError(err, {
+            ...parameters,
+            account,
+            chain: parameters.chain || undefined,
+        });
+    }
+}
+//# sourceMappingURL=sendTransactionSync.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/showCallsStatus.js
+/**
+ * Requests for the wallet to show information about a call batch
+ * that was sent via `sendCalls`.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/showCallsStatus
+ * - JSON-RPC Methods: [`wallet_showCallsStatus`](https://eips.ethereum.org/EIPS/eip-5792)
+ *
+ * @param client - Client to use
+ * @returns Status of the calls. {@link ShowCallsStatusReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { showCallsStatus } from 'viem/actions'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * await showCallsStatus(client, { id: '0xdeadbeef' })
+ */
+async function showCallsStatus(client, parameters) {
+    const { id } = parameters;
+    await client.request({
+        method: 'wallet_showCallsStatus',
+        params: [id],
+    });
+    return;
+}
+//# sourceMappingURL=showCallsStatus.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/signAuthorization.js
+
+
+
+/**
+ * Signs an [EIP-7702 Authorization](https://eips.ethereum.org/EIPS/eip-7702) object.
+ *
+ * With the calculated signature, you can:
+ * - use [`verifyAuthorization`](https://viem.sh/docs/eip7702/verifyAuthorization) to verify the signed Authorization object,
+ * - use [`recoverAuthorizationAddress`](https://viem.sh/docs/eip7702/recoverAuthorizationAddress) to recover the signing address from the signed Authorization object.
+ *
+ * @param client - Client to use
+ * @param parameters - {@link SignAuthorizationParameters}
+ * @returns The signed Authorization object. {@link SignAuthorizationReturnType}
+ *
+ * @example
+ * import { createClient, http } from 'viem'
+ * import { privateKeyToAccount } from 'viem/accounts'
+ * import { mainnet } from 'viem/chains'
+ * import { signAuthorization } from 'viem/experimental'
+ *
+ * const client = createClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const signature = await signAuthorization(client, {
+ *   account: privateKeyToAccount('0x..'),
+ *   contractAddress: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ * })
+ *
+ * @example
+ * // Account Hoisting
+ * import { createClient, http } from 'viem'
+ * import { privateKeyToAccount } from 'viem/accounts'
+ * import { mainnet } from 'viem/chains'
+ * import { signAuthorization } from 'viem/experimental'
+ *
+ * const client = createClient({
+ *   account: privateKeyToAccount('0x…'),
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const signature = await signAuthorization(client, {
+ *   contractAddress: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ * })
+ */
+async function signAuthorization(client, parameters) {
+    const { account: account_ = client.account } = parameters;
+    if (!account_)
+        throw new AccountNotFoundError({
+            docsPath: '/docs/eip7702/signAuthorization',
+        });
+    const account = (0,parseAccount/* parseAccount */.J)(account_);
+    if (!account.signAuthorization)
+        throw new AccountTypeNotSupportedError({
+            docsPath: '/docs/eip7702/signAuthorization',
+            metaMessages: [
+                'The `signAuthorization` Action does not support JSON-RPC Accounts.',
+            ],
+            type: account.type,
+        });
+    const authorization = await prepareAuthorization(client, parameters);
+    return account.signAuthorization(authorization);
+}
+//# sourceMappingURL=signAuthorization.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/signMessage.js
+
+
+
+/**
+ * Calculates an Ethereum-specific signature in [EIP-191 format](https://eips.ethereum.org/EIPS/eip-191): `keccak256("\x19Ethereum Signed Message:\n" + len(message) + message))`.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/signMessage
+ * - JSON-RPC Methods:
+ *   - JSON-RPC Accounts: [`personal_sign`](https://docs.metamask.io/guide/signing-data#personal-sign)
+ *   - Local Accounts: Signs locally. No JSON-RPC request.
+ *
+ * With the calculated signature, you can:
+ * - use [`verifyMessage`](https://viem.sh/docs/utilities/verifyMessage) to verify the signature,
+ * - use [`recoverMessageAddress`](https://viem.sh/docs/utilities/recoverMessageAddress) to recover the signing address from a signature.
+ *
+ * @param client - Client to use
+ * @param parameters - {@link SignMessageParameters}
+ * @returns The signed message. {@link SignMessageReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { signMessage } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const signature = await signMessage(client, {
+ *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ *   message: 'hello world',
+ * })
+ *
+ * @example
+ * // Account Hoisting
+ * import { createWalletClient, custom } from 'viem'
+ * import { privateKeyToAccount } from 'viem/accounts'
+ * import { mainnet } from 'viem/chains'
+ * import { signMessage } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   account: privateKeyToAccount('0x…'),
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const signature = await signMessage(client, {
+ *   message: 'hello world',
+ * })
+ */
+async function signMessage(client, { account: account_ = client.account, message, }) {
+    if (!account_)
+        throw new AccountNotFoundError({
+            docsPath: '/docs/actions/wallet/signMessage',
+        });
+    const account = (0,parseAccount/* parseAccount */.J)(account_);
+    if (account.signMessage)
+        return account.signMessage({ message });
+    const message_ = (() => {
+        if (typeof message === 'string')
+            return (0,toHex/* stringToHex */.i3)(message);
+        if (message.raw instanceof Uint8Array)
+            return (0,toHex/* toHex */.nj)(message.raw);
+        return message.raw;
+    })();
+    return client.request({
+        method: 'personal_sign',
+        params: [message_, account.address],
+    }, { retryCount: 0 });
+}
+//# sourceMappingURL=signMessage.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/signTransaction.js
+
+
+
+
+
+
+
+
+/**
+ * Signs a transaction.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/signTransaction
+ * - JSON-RPC Methods:
+ *   - JSON-RPC Accounts: [`eth_signTransaction`](https://ethereum.github.io/execution-apis/api-documentation/)
+ *   - Local Accounts: Signs locally. No JSON-RPC request.
+ *
+ * @param args - {@link SignTransactionParameters}
+ * @returns The signed serialized transaction. {@link SignTransactionReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { signTransaction } from 'viem/actions'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const signature = await signTransaction(client, {
+ *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ *   to: '0x0000000000000000000000000000000000000000',
+ *   value: 1n,
+ * })
+ *
+ * @example
+ * // Account Hoisting
+ * import { createWalletClient, http } from 'viem'
+ * import { privateKeyToAccount } from 'viem/accounts'
+ * import { mainnet } from 'viem/chains'
+ * import { signTransaction } from 'viem/actions'
+ *
+ * const client = createWalletClient({
+ *   account: privateKeyToAccount('0x…'),
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const signature = await signTransaction(client, {
+ *   to: '0x0000000000000000000000000000000000000000',
+ *   value: 1n,
+ * })
+ */
+async function signTransaction(client, parameters) {
+    const { account: account_ = client.account, chain = client.chain, ...transaction } = parameters;
+    if (!account_)
+        throw new AccountNotFoundError({
+            docsPath: '/docs/actions/wallet/signTransaction',
+        });
+    const account = (0,parseAccount/* parseAccount */.J)(account_);
+    (0,assertRequest/* assertRequest */.c)({
+        account,
+        ...parameters,
+    });
+    const chainId = await getAction(client, getChainId_getChainId, 'getChainId')({});
+    if (chain !== null)
+        assertCurrentChain({
+            currentChainId: chainId,
+            chain,
+        });
+    const formatters = chain?.formatters || client.chain?.formatters;
+    const format = formatters?.transactionRequest?.format || transactionRequest/* formatTransactionRequest */.Bv;
+    if (account.signTransaction)
+        return account.signTransaction({
+            ...transaction,
+            account,
+            chainId,
+        }, { serializer: client.chain?.serializers?.transaction });
+    return await client.request({
+        method: 'eth_signTransaction',
+        params: [
+            {
+                ...format({
+                    ...transaction,
+                    account,
+                }, 'signTransaction'),
+                chainId: (0,toHex/* numberToHex */.cK)(chainId),
+                from: account.address,
+            },
+        ],
+    }, { retryCount: 0 });
+}
+//# sourceMappingURL=signTransaction.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/signTypedData.js
+
+
+
+/**
+ * Signs typed data and calculates an Ethereum-specific signature in [https://eips.ethereum.org/EIPS/eip-712](https://eips.ethereum.org/EIPS/eip-712): `sign(keccak256("\x19\x01" ‖ domainSeparator ‖ hashStruct(message)))`
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/signTypedData
+ * - JSON-RPC Methods:
+ *   - JSON-RPC Accounts: [`eth_signTypedData_v4`](https://docs.metamask.io/guide/signing-data#signtypeddata-v4)
+ *   - Local Accounts: Signs locally. No JSON-RPC request.
+ *
+ * @param client - Client to use
+ * @param parameters - {@link SignTypedDataParameters}
+ * @returns The signed data. {@link SignTypedDataReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { signTypedData } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const signature = await signTypedData(client, {
+ *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
+ *   domain: {
+ *     name: 'Ether Mail',
+ *     version: '1',
+ *     chainId: 1,
+ *     verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
+ *   },
+ *   types: {
+ *     Person: [
+ *       { name: 'name', type: 'string' },
+ *       { name: 'wallet', type: 'address' },
+ *     ],
+ *     Mail: [
+ *       { name: 'from', type: 'Person' },
+ *       { name: 'to', type: 'Person' },
+ *       { name: 'contents', type: 'string' },
+ *     ],
+ *   },
+ *   primaryType: 'Mail',
+ *   message: {
+ *     from: {
+ *       name: 'Cow',
+ *       wallet: '0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826',
+ *     },
+ *     to: {
+ *       name: 'Bob',
+ *       wallet: '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB',
+ *     },
+ *     contents: 'Hello, Bob!',
+ *   },
+ * })
+ *
+ * @example
+ * // Account Hoisting
+ * import { createWalletClient, http } from 'viem'
+ * import { privateKeyToAccount } from 'viem/accounts'
+ * import { mainnet } from 'viem/chains'
+ * import { signTypedData } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   account: privateKeyToAccount('0x…'),
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const signature = await signTypedData(client, {
+ *   domain: {
+ *     name: 'Ether Mail',
+ *     version: '1',
+ *     chainId: 1,
+ *     verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
+ *   },
+ *   types: {
+ *     Person: [
+ *       { name: 'name', type: 'string' },
+ *       { name: 'wallet', type: 'address' },
+ *     ],
+ *     Mail: [
+ *       { name: 'from', type: 'Person' },
+ *       { name: 'to', type: 'Person' },
+ *       { name: 'contents', type: 'string' },
+ *     ],
+ *   },
+ *   primaryType: 'Mail',
+ *   message: {
+ *     from: {
+ *       name: 'Cow',
+ *       wallet: '0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826',
+ *     },
+ *     to: {
+ *       name: 'Bob',
+ *       wallet: '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB',
+ *     },
+ *     contents: 'Hello, Bob!',
+ *   },
+ * })
+ */
+async function signTypedData(client, parameters) {
+    const { account: account_ = client.account, domain, message, primaryType, } = parameters;
+    if (!account_)
+        throw new AccountNotFoundError({
+            docsPath: '/docs/actions/wallet/signTypedData',
+        });
+    const account = (0,parseAccount/* parseAccount */.J)(account_);
+    const types = {
+        EIP712Domain: getTypesForEIP712Domain({ domain }),
+        ...parameters.types,
+    };
+    // Need to do a runtime validation check on addresses, byte ranges, integer ranges, etc
+    // as we can't statically check this with TypeScript.
+    validateTypedData({ domain, message, primaryType, types });
+    if (account.signTypedData)
+        return account.signTypedData({ domain, message, primaryType, types });
+    const typedData = serializeTypedData({ domain, message, primaryType, types });
+    return client.request({
+        method: 'eth_signTypedData_v4',
+        params: [account.address, typedData],
+    }, { retryCount: 0 });
+}
+//# sourceMappingURL=signTypedData.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/switchChain.js
+
+/**
+ * Switch the target chain in a wallet.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/switchChain
+ * - JSON-RPC Methods: [`wallet_switchEthereumChain`](https://eips.ethereum.org/EIPS/eip-3326)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link SwitchChainParameters}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet, optimism } from 'viem/chains'
+ * import { switchChain } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * await switchChain(client, { id: optimism.id })
+ */
+async function switchChain(client, { id }) {
+    await client.request({
+        method: 'wallet_switchEthereumChain',
+        params: [
+            {
+                chainId: (0,toHex/* numberToHex */.cK)(id),
+            },
+        ],
+    }, { retryCount: 0 });
+}
+//# sourceMappingURL=switchChain.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/watchAsset.js
+/**
+ * Adds an EVM chain to the wallet.
+ *
+ * - Docs: https://viem.sh/docs/actions/wallet/watchAsset
+ * - JSON-RPC Methods: [`eth_switchEthereumChain`](https://eips.ethereum.org/EIPS/eip-747)
+ *
+ * @param client - Client to use
+ * @param parameters - {@link WatchAssetParameters}
+ * @returns Boolean indicating if the token was successfully added. {@link WatchAssetReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { watchAsset } from 'viem/wallet'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const success = await watchAsset(client, {
+ *   type: 'ERC20',
+ *   options: {
+ *     address: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+ *     decimals: 18,
+ *     symbol: 'WETH',
+ *   },
+ * })
+ */
+async function watchAsset(client, params) {
+    const added = await client.request({
+        method: 'wallet_watchAsset',
+        params,
+    }, { retryCount: 0 });
+    return added;
+}
+//# sourceMappingURL=watchAsset.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/writeContract.js
+
+
+
+
+
+
+/**
+ * Executes a write function on a contract.
+ *
+ * - Docs: https://viem.sh/docs/contract/writeContract
+ * - Examples: https://stackblitz.com/github/wevm/viem/tree/main/examples/contracts_writing-to-contracts
+ *
+ * A "write" function on a Solidity contract modifies the state of the blockchain. These types of functions require gas to be executed, and hence a [Transaction](https://viem.sh/docs/glossary/terms) is needed to be broadcast in order to change the state.
+ *
+ * Internally, uses a [Wallet Client](https://viem.sh/docs/clients/wallet) to call the [`sendTransaction` action](https://viem.sh/docs/actions/wallet/sendTransaction) with [ABI-encoded `data`](https://viem.sh/docs/contract/encodeFunctionData).
+ *
+ * __Warning: The `write` internally sends a transaction – it does not validate if the contract write will succeed (the contract may throw an error). It is highly recommended to [simulate the contract write with `contract.simulate`](https://viem.sh/docs/contract/writeContract#usage) before you execute it.__
+ *
+ * @param client - Client to use
+ * @param parameters - {@link WriteContractParameters}
+ * @returns A [Transaction Hash](https://viem.sh/docs/glossary/terms#hash). {@link WriteContractReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom, parseAbi } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { writeContract } from 'viem/contract'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const hash = await writeContract(client, {
+ *   address: '0xFBA3912Ca04dd458c843e2EE08967fC04f3579c2',
+ *   abi: parseAbi(['function mint(uint32 tokenId) nonpayable']),
+ *   functionName: 'mint',
+ *   args: [69420],
+ * })
+ *
+ * @example
+ * // With Validation
+ * import { createWalletClient, http, parseAbi } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { simulateContract, writeContract } from 'viem/contract'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: http(),
+ * })
+ * const { request } = await simulateContract(client, {
+ *   address: '0xFBA3912Ca04dd458c843e2EE08967fC04f3579c2',
+ *   abi: parseAbi(['function mint(uint32 tokenId) nonpayable']),
+ *   functionName: 'mint',
+ *   args: [69420],
+ * }
+ * const hash = await writeContract(client, request)
+ */
+async function writeContract(client, parameters) {
+    return writeContract.internal(client, sendTransaction, 'sendTransaction', parameters);
+}
+(function (writeContract) {
+    async function internal(client, actionFn, name, parameters) {
+        const { abi, account: account_ = client.account, address, args, functionName, ...request } = parameters;
+        if (typeof account_ === 'undefined')
+            throw new AccountNotFoundError({
+                docsPath: '/docs/contract/writeContract',
+            });
+        const account = account_ ? (0,parseAccount/* parseAccount */.J)(account_) : null;
+        const data = (0,encodeFunctionData/* encodeFunctionData */.p)({
+            abi,
+            args,
+            functionName,
+        });
+        try {
+            return await getAction(client, actionFn, name)({
+                data,
+                to: address,
+                account,
+                ...request,
+            });
+        }
+        catch (error) {
+            throw getContractError(error, {
+                abi,
+                address,
+                args,
+                docsPath: '/docs/contract/writeContract',
+                functionName,
+                sender: account?.address,
+            });
+        }
+    }
+    writeContract.internal = internal;
+})(writeContract || (writeContract = {}));
+//# sourceMappingURL=writeContract.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/actions/wallet/writeContractSync.js
+
+
+/**
+ * Executes a write function on a contract synchronously.
+ * Returns the transaction receipt.
+ *
+ * - Docs: https://viem.sh/docs/contract/writeContractSync
+ *
+ * A "write" function on a Solidity contract modifies the state of the blockchain. These types of functions require gas to be executed, and hence a [Transaction](https://viem.sh/docs/glossary/terms) is needed to be broadcast in order to change the state.
+ *
+ * Internally, uses a [Wallet Client](https://viem.sh/docs/clients/wallet) to call the [`sendTransaction` action](https://viem.sh/docs/actions/wallet/sendTransaction) with [ABI-encoded `data`](https://viem.sh/docs/contract/encodeFunctionData).
+ *
+ * __Warning: The `write` internally sends a transaction – it does not validate if the contract write will succeed (the contract may throw an error). It is highly recommended to [simulate the contract write with `contract.simulate`](https://viem.sh/docs/contract/writeContract#usage) before you execute it.__
+ *
+ * @param client - Client to use
+ * @param parameters - {@link WriteContractParameters}
+ * @returns A [Transaction Hash](https://viem.sh/docs/glossary/terms#hash). {@link WriteContractReturnType}
+ *
+ * @example
+ * import { createWalletClient, custom, parseAbi } from 'viem'
+ * import { mainnet } from 'viem/chains'
+ * import { writeContract } from 'viem/contract'
+ *
+ * const client = createWalletClient({
+ *   chain: mainnet,
+ *   transport: custom(window.ethereum),
+ * })
+ * const receipt = await writeContractSync(client, {
+ *   address: '0xFBA3912Ca04dd458c843e2EE08967fC04f3579c2',
+ *   abi: parseAbi(['function mint(uint32 tokenId) nonpayable']),
+ *   functionName: 'mint',
+ *   args: [69420],
+ * })
+ */
+async function writeContractSync(client, parameters) {
+    return writeContract.internal(client, sendTransactionSync, 'sendTransactionSync', parameters);
+}
+//# sourceMappingURL=writeContractSync.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/clients/decorators/wallet.js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function walletActions(client) {
+    return {
+        addChain: (args) => addChain(client, args),
+        deployContract: (args) => deployContract(client, args),
+        fillTransaction: (args) => fillTransaction(client, args),
+        getAddresses: () => getAddresses(client),
+        getCallsStatus: (args) => getCallsStatus(client, args),
+        getCapabilities: (args) => getCapabilities(client, args),
+        getChainId: () => getChainId_getChainId(client),
+        getPermissions: () => getPermissions(client),
+        prepareAuthorization: (args) => prepareAuthorization(client, args),
+        prepareTransactionRequest: (args) => prepareTransactionRequest(client, args),
+        requestAddresses: () => requestAddresses(client),
+        requestPermissions: (args) => requestPermissions(client, args),
+        sendCalls: (args) => sendCalls(client, args),
+        sendCallsSync: (args) => sendCallsSync(client, args),
+        sendRawTransaction: (args) => sendRawTransaction(client, args),
+        sendRawTransactionSync: (args) => sendRawTransactionSync(client, args),
+        sendTransaction: (args) => sendTransaction(client, args),
+        sendTransactionSync: (args) => sendTransactionSync(client, args),
+        showCallsStatus: (args) => showCallsStatus(client, args),
+        signAuthorization: (args) => signAuthorization(client, args),
+        signMessage: (args) => signMessage(client, args),
+        signTransaction: (args) => signTransaction(client, args),
+        signTypedData: (args) => signTypedData(client, args),
+        switchChain: (args) => switchChain(client, args),
+        waitForCallsStatus: (args) => waitForCallsStatus(client, args),
+        watchAsset: (args) => watchAsset(client, args),
+        writeContract: (args) => writeContract(client, args),
+        writeContractSync: (args) => writeContractSync(client, args),
+    };
+}
+//# sourceMappingURL=wallet.js.map
+;// CONCATENATED MODULE: ./node_modules/viem/_esm/clients/createWalletClient.js
+
+
+function createWalletClient(parameters) {
+    const { key = 'wallet', name = 'Wallet Client', transport } = parameters;
+    const client = createClient({
+        ...parameters,
+        key,
+        name,
+        transport,
+        type: 'walletClient',
+    });
+    return client.extend(walletActions);
+}
+//# sourceMappingURL=createWalletClient.js.map
 ;// CONCATENATED MODULE: ./node_modules/viem/_esm/accounts/toAccount.js
 // TODO(v3): Rename to `toLocalAccount` + add `source` property to define source (privateKey, mnemonic, hdKey, etc).
 
@@ -58540,6 +58556,7 @@ const VIEM_CHAINS = Object.freeze({
 const PYTH_ABI = (0,parseAbi/* parseAbi */.U)([
   'function updatePriceFeeds(bytes[] updateData) payable',
   'function getUpdateFee(bytes[] updateData) view returns (uint256)',
+  'function getPriceUnsafe(bytes32 id) view returns (int64 price, uint64 conf, int32 expo, uint publishTime)',
 ])
 
 /**
@@ -58579,6 +58596,70 @@ async function getUpdateFee({ network, updateData, rpcUrl }) {
     chain: network,
     contract,
     feedCount: normalized.length,
+  }
+}
+
+/**
+ * Read a Pyth price directly from the on-chain Pull Oracle contract.
+ *
+ * Calls `getPriceUnsafe(id)` — a plain, free `eth_call`, no Hermes API
+ * key. Returns the price observation currently stored on chain (the same
+ * value the consuming contracts would act on). `getPriceUnsafe` does not
+ * revert on staleness; the caller decides any staleness policy from the
+ * returned `publishTime`.
+ *
+ * @param {object} opts
+ * @param {string} opts.network — Chain key (avalanche, ethereum, base, ...)
+ * @param {string} opts.id — Pyth price feed id (0x-prefixed bytes32).
+ * @param {string} [opts.rpcUrl] — Optional custom RPC URL.
+ * @returns {Promise<{ id, price, conf, expo, publishTime, value, chain, contract }>}
+ *   `price`, `conf`, and `publishTime` are decimal-stringified so they
+ *   round-trip losslessly through JSON into the workflow's `to_bigint(...)`.
+ *   `value` is the human-readable `price * 10**expo` as a JS number (for
+ *   display/summary only — do not gate on it, use `price` + `expo`).
+ */
+async function readPriceOnChain({ network, id, rpcUrl }) {
+  const contract = PYTH_CONTRACTS[network]
+  const chain = VIEM_CHAINS[network]
+  if (!contract || !chain) {
+    throw new dist/* W3ActionError */.FE(
+      'UNSUPPORTED_NETWORK',
+      `Unsupported network: ${network}. Supported: ${Object.keys(PYTH_CONTRACTS).join(', ')}`,
+    )
+  }
+  if (!id) {
+    throw new dist/* W3ActionError */.FE(
+      'MISSING_ID',
+      'id is required (the Pyth price feed id as a 0x-prefixed bytes32). Pass it via `ids:`.',
+    )
+  }
+
+  const publicClient = createPublicClient({
+    chain,
+    transport: http(rpcUrl || undefined),
+  })
+
+  const [price, conf, expo, publishTime] = await publicClient.readContract({
+    address: contract,
+    abi: PYTH_ABI,
+    functionName: 'getPriceUnsafe',
+    args: [id],
+  })
+
+  const expoNum = Number(expo)
+  const value = Number(price) * 10 ** expoNum
+
+  core.info(`getPriceUnsafe: chain=${network} id=${id} price=${price} expo=${expoNum} (~ ${value})`)
+
+  return {
+    id,
+    price: price.toString(),
+    conf: conf.toString(),
+    expo: expoNum,
+    publishTime: publishTime.toString(),
+    value,
+    chain: network,
+    contract,
   }
 }
 
