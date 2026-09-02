@@ -47,6 +47,7 @@ const VIEM_CHAINS = Object.freeze({
 const PYTH_ABI = parseAbi([
   'function updatePriceFeeds(bytes[] updateData) payable',
   'function getUpdateFee(bytes[] updateData) view returns (uint256)',
+  'function getPriceUnsafe(bytes32 id) view returns (int64 price, uint64 conf, int32 expo, uint publishTime)',
 ])
 
 /**
@@ -86,6 +87,70 @@ export async function getUpdateFee({ network, updateData, rpcUrl }) {
     chain: network,
     contract,
     feedCount: normalized.length,
+  }
+}
+
+/**
+ * Read a Pyth price directly from the on-chain Pull Oracle contract.
+ *
+ * Calls `getPriceUnsafe(id)` — a plain, free `eth_call`, no Hermes API
+ * key. Returns the price observation currently stored on chain (the same
+ * value the consuming contracts would act on). `getPriceUnsafe` does not
+ * revert on staleness; the caller decides any staleness policy from the
+ * returned `publishTime`.
+ *
+ * @param {object} opts
+ * @param {string} opts.network — Chain key (avalanche, ethereum, base, ...)
+ * @param {string} opts.id — Pyth price feed id (0x-prefixed bytes32).
+ * @param {string} [opts.rpcUrl] — Optional custom RPC URL.
+ * @returns {Promise<{ id, price, conf, expo, publishTime, value, chain, contract }>}
+ *   `price`, `conf`, and `publishTime` are decimal-stringified so they
+ *   round-trip losslessly through JSON into the workflow's `to_bigint(...)`.
+ *   `value` is the human-readable `price * 10**expo` as a JS number (for
+ *   display/summary only — do not gate on it, use `price` + `expo`).
+ */
+export async function readPriceOnChain({ network, id, rpcUrl }) {
+  const contract = PYTH_CONTRACTS[network]
+  const chain = VIEM_CHAINS[network]
+  if (!contract || !chain) {
+    throw new W3ActionError(
+      'UNSUPPORTED_NETWORK',
+      `Unsupported network: ${network}. Supported: ${Object.keys(PYTH_CONTRACTS).join(', ')}`,
+    )
+  }
+  if (!id) {
+    throw new W3ActionError(
+      'MISSING_ID',
+      'id is required (the Pyth price feed id as a 0x-prefixed bytes32). Pass it via `ids:`.',
+    )
+  }
+
+  const publicClient = createPublicClient({
+    chain,
+    transport: http(rpcUrl || undefined),
+  })
+
+  const [price, conf, expo, publishTime] = await publicClient.readContract({
+    address: contract,
+    abi: PYTH_ABI,
+    functionName: 'getPriceUnsafe',
+    args: [id],
+  })
+
+  const expoNum = Number(expo)
+  const value = Number(price) * 10 ** expoNum
+
+  core.info(`getPriceUnsafe: chain=${network} id=${id} price=${price} expo=${expoNum} (~ ${value})`)
+
+  return {
+    id,
+    price: price.toString(),
+    conf: conf.toString(),
+    expo: expoNum,
+    publishTime: publishTime.toString(),
+    value,
+    chain: network,
+    contract,
   }
 }
 

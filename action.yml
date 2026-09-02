@@ -4,7 +4,7 @@ author: 'w3-io'
 
 inputs:
   command:
-    description: 'Operation to perform: get-feeds, get-prices, get-historical-prices, get-update-fee, submit-on-chain'
+    description: 'Operation to perform: get-feeds, get-prices, get-historical-prices, read-price-onchain, get-update-fee, submit-on-chain'
     required: true
   api-url:
     description: 'Pyth Hermes API base URL (override for testing/staging)'

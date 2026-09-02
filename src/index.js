@@ -1,7 +1,7 @@
 import { createCommandRouter, setJsonOutput, handleError, W3ActionError } from '@w3-io/action-core'
 import * as core from '@actions/core'
 import { PythClient } from './pyth.js'
-import { getUpdateFee, submitOnChain } from './onchain.js'
+import { getUpdateFee, submitOnChain, readPriceOnChain } from './onchain.js'
 
 const router = createCommandRouter({
   'get-feeds': async () => {
@@ -41,6 +41,21 @@ const router = createCommandRouter({
       .addHeading('Pyth update fee', 3)
       .addRaw(
         `On **${result.chain}**, **${result.feedCount}** feed(s) cost **${result.wei}** wei.\n`,
+      )
+      .write()
+  },
+
+  'read-price-onchain': async () => {
+    const network = core.getInput('network') || 'avalanche'
+    const id = parseList(core.getInput('ids'))[0]
+    const rpcUrl = core.getInput('rpc-url') || undefined
+
+    const result = await readPriceOnChain({ network, id, rpcUrl })
+    setJsonOutput('result', result)
+    core.summary
+      .addHeading('Pyth on-chain price', 3)
+      .addRaw(
+        `\`${result.id}\` on **${result.chain}**: price \`${result.price}\` (expo ${result.expo}) ~ **${result.value}**\n`,
       )
       .write()
   },
